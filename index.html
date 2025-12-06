@@ -1,0 +1,1590 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إدارة المصروفات الذكية - نسخة منظمة</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --secondary-gradient: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            --success-gradient: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            --danger-gradient: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            --info-gradient: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            --dark-gradient: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            --light-gradient: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            --card-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            --hover-shadow: 0 15px 35px rgba(0,0,0,0.15);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Tajawal', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            min-height: 100vh;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* Authentication Styles */
+        .auth-container {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(10px);
+            z-index: 3000;
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .auth-container.show {
+            display: flex;
+        }
+
+        .auth-box {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 450px;
+            width: 90%;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.2);
+            animation: slideUp 0.5s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .auth-box::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 100%;
+            height: 6px;
+            background: var(--primary-gradient);
+        }
+
+        .auth-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .auth-header h2 {
+            color: #333;
+            font-size: 2em;
+            margin-bottom: 10px;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .auth-tabs {
+            display: flex;
+            background: #f1f5f9;
+            border-radius: 12px;
+            padding: 5px;
+            margin-bottom: 25px;
+        }
+
+        .auth-tab {
+            flex: 1;
+            padding: 12px;
+            text-align: center;
+            cursor: pointer;
+            border-radius: 10px;
+            transition: var(--transition);
+            font-weight: 600;
+            color: #64748b;
+        }
+
+        .auth-tab.active {
+            background: white;
+            color: #667eea;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        }
+
+        .auth-form {
+            display: none;
+        }
+
+        .auth-form.active {
+            display: block;
+        }
+
+        /* Main Header */
+        .main-header {
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            margin-bottom: 25px;
+            color: #333;
+            position: relative;
+            overflow: hidden;
+            box-shadow: var(--card-shadow);
+            animation: slideDown 0.6s ease-out;
+            border-bottom: 4px solid #667eea;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .user-details {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .user-avatar {
+            width: 60px;
+            height: 60px;
+            background: var(--primary-gradient);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+            color: white;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .user-text h2 {
+            font-size: 1.6em;
+            margin-bottom: 5px;
+            color: #1e293b;
+        }
+
+        .user-text p {
+            color: #64748b;
+            font-size: 1em;
+        }
+
+        .logout-btn {
+            background: #ef4444;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9em;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .logout-btn:hover {
+            background: #dc2626;
+            transform: translateY(-2px);
+        }
+
+        /* Quick Stats */
+        .quick-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .quick-stat {
+            background: #f8fafc;
+            padding: 15px;
+            border-radius: 12px;
+            border-right: 4px solid;
+            transition: var(--transition);
+        }
+
+        .quick-stat:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--hover-shadow);
+        }
+
+        .quick-stat:nth-child(1) {
+            border-color: #10b981;
+        }
+        .quick-stat:nth-child(2) {
+            border-color: #f59e0b;
+        }
+        .quick-stat:nth-child(3) {
+            border-color: #3b82f6;
+        }
+
+        .quick-stat-label {
+            font-size: 0.85em;
+            color: #64748b;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .quick-stat-value {
+            font-size: 1.8em;
+            font-weight: 800;
+            color: #1e293b;
+        }
+
+        /* Main Content */
+        .main-content {
+            display: flex;
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                flex-direction: column;
+            }
+        }
+
+        /* Add Expense Section */
+        .add-expense-section {
+            flex: 1;
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: var(--card-shadow);
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 1.4em;
+            color: #1e293b;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-title i {
+            color: #667eea;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            color: #475569;
+            font-weight: 600;
+            font-size: 0.9em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 1em;
+            transition: var(--transition);
+            font-family: inherit;
+            background: #f8fafc;
+        }
+
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .btn-primary {
+            background: var(--primary-gradient);
+            color: white;
+            width: 100%;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-success {
+            background: var(--success-gradient);
+            color: white;
+        }
+
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(16, 185, 129, 0.3);
+        }
+
+        .btn-danger {
+            background: var(--danger-gradient);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(239, 68, 68, 0.3);
+        }
+
+        .btn-info {
+            background: var(--info-gradient);
+            color: white;
+        }
+
+        .btn-info:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(59, 130, 246, 0.3);
+        }
+
+        /* Recent Expenses */
+        .recent-expenses {
+            flex: 1;
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: var(--card-shadow);
+            margin-bottom: 25px;
+        }
+
+        .expense-item {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: var(--transition);
+            border-right: 4px solid;
+        }
+
+        .expense-item:hover {
+            transform: translateX(-5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .expense-info {
+            flex: 1;
+        }
+
+        .expense-category {
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .category-icon {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.9em;
+        }
+
+        .expense-details {
+            color: #64748b;
+            font-size: 0.85em;
+        }
+
+        .expense-amount {
+            font-size: 1.4em;
+            font-weight: 800;
+            margin-right: 15px;
+            min-width: 100px;
+            text-align: left;
+        }
+
+        .expense-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        /* Settings Menu */
+        .settings-menu {
+            position: fixed;
+            top: 120px;
+            left: 40px;
+            background: white;
+            border-radius: 15px;
+            padding: 15px;
+            box-shadow: var(--card-shadow);
+            z-index: 2000;
+            display: none;
+            flex-direction: column;
+            gap: 10px;
+            min-width: 200px;
+            animation: slideRight 0.3s ease;
+            border: 1px solid #e2e8f0;
+        }
+
+        .settings-menu.show {
+            display: flex;
+        }
+
+        .settings-item {
+            padding: 12px 15px;
+            background: #f8fafc;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 600;
+            color: #475569;
+            border: 1px solid transparent;
+        }
+
+        .settings-item:hover {
+            background: var(--primary-gradient);
+            color: white;
+            transform: translateX(5px);
+        }
+
+        /* Floating Action Button */
+        .fab {
+            position: fixed;
+            bottom: 30px;
+            left: 30px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: var(--secondary-gradient);
+            color: white;
+            font-size: 1.2em;
+            cursor: pointer;
+            box-shadow: 0 10px 25px rgba(245, 158, 11, 0.3);
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .fab:hover {
+            transform: scale(1.1) rotate(10deg);
+            box-shadow: 0 15px 30px rgba(245, 158, 11, 0.4);
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #94a3b8;
+        }
+
+        .empty-state i {
+            font-size: 3em;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+
+        .empty-state p {
+            font-size: 1em;
+            margin-bottom: 15px;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(10px);
+            z-index: 4000;
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            animation: slideUp 0.4s ease;
+            box-shadow: 0 40px 80px rgba(0,0,0,0.2);
+            position: relative;
+        }
+
+        .modal-header {
+            font-size: 1.5em;
+            color: #333;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-close {
+            background: #ef4444;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.2em;
+            transition: var(--transition);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-close:hover {
+            background: #dc2626;
+            transform: rotate(90deg);
+        }
+
+        /* Category Colors */
+        .category-colors {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .color-option {
+            padding: 15px;
+            border-radius: 10px;
+            cursor: pointer;
+            text-align: center;
+            color: white;
+            font-weight: 600;
+            transition: var(--transition);
+            font-size: 0.8em;
+            border: 3px solid transparent;
+        }
+
+        .color-option:hover {
+            transform: scale(1.1);
+        }
+
+        .color-option.selected {
+            border-color: #1e293b;
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        /* Animations */
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideRight {
+            from {
+                opacity: 0;
+                transform: translateX(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+
+            .main-header {
+                padding: 20px;
+            }
+
+            .user-info {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+
+            .quick-stats {
+                grid-template-columns: 1fr;
+            }
+
+            .fab {
+                bottom: 20px;
+                left: 20px;
+            }
+
+            .settings-menu {
+                top: 100px;
+                left: 20px;
+                right: 20px;
+                min-width: auto;
+            }
+
+            .modal-content {
+                padding: 20px 15px;
+            }
+
+            .category-colors {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Authentication Container -->
+    <div id="authContainer" class="auth-container show">
+        <div class="auth-box">
+            <div class="auth-header">
+                <h2><i class="fas fa-wallet"></i> إدارة المصروفات الذكية</h2>
+                <p>سجل الدخول للبدء</p>
+            </div>
+            
+            <div class="auth-tabs">
+                <div class="auth-tab active" onclick="showAuthForm('login')">تسجيل الدخول</div>
+                <div class="auth-tab" onclick="showAuthForm('register')">حساب جديد</div>
+            </div>
+            
+            <div id="loginForm" class="auth-form active">
+                <div class="form-group">
+                    <label for="loginEmail"><i class="fas fa-envelope"></i> البريد الإلكتروني</label>
+                    <input type="email" id="loginEmail" class="form-input" placeholder="example@email.com">
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword"><i class="fas fa-lock"></i> كلمة المرور</label>
+                    <input type="password" id="loginPassword" class="form-input" placeholder="********">
+                </div>
+                <button class="btn btn-primary" onclick="login()">
+                    <i class="fas fa-sign-in-alt"></i> تسجيل الدخول
+                </button>
+            </div>
+            
+            <div id="registerForm" class="auth-form">
+                <div class="form-group">
+                    <label for="registerName"><i class="fas fa-user"></i> الاسم</label>
+                    <input type="text" id="registerName" class="form-input" placeholder="اسمك الكامل">
+                </div>
+                <div class="form-group">
+                    <label for="registerEmail"><i class="fas fa-envelope"></i> البريد الإلكتروني</label>
+                    <input type="email" id="registerEmail" class="form-input" placeholder="example@email.com">
+                </div>
+                <div class="form-group">
+                    <label for="registerPassword"><i class="fas fa-lock"></i> كلمة المرور</label>
+                    <input type="password" id="registerPassword" class="form-input" placeholder="********">
+                </div>
+                <div class="form-group">
+                    <label for="confirmPassword"><i class="fas fa-lock"></i> تأكيد كلمة المرور</label>
+                    <input type="password" id="confirmPassword" class="form-input" placeholder="********">
+                </div>
+                <button class="btn btn-success" onclick="register()">
+                    <i class="fas fa-user-plus"></i> إنشاء حساب
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App Container -->
+    <div id="appContainer" class="container" style="display: none;">
+        <!-- Main Header -->
+        <div class="main-header">
+            <div class="user-info">
+                <div class="user-details">
+                    <div class="user-avatar">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div class="user-text">
+                        <h2 id="userName">مستخدم</h2>
+                        <p id="userEmail">example@email.com</p>
+                    </div>
+                </div>
+                <button class="logout-btn" onclick="logout()">
+                    <i class="fas fa-sign-out-alt"></i> تسجيل الخروج
+                </button>
+            </div>
+            
+            <div class="quick-stats">
+                <div class="quick-stat">
+                    <div class="quick-stat-label">
+                        <i class="fas fa-piggy-bank"></i> الميزانية الشهرية
+                    </div>
+                    <div class="quick-stat-value" id="totalBudget">0 ج.م</div>
+                </div>
+                <div class="quick-stat">
+                    <div class="quick-stat-label">
+                        <i class="fas fa-money-bill-wave"></i> إجمالي المصروفات
+                    </div>
+                    <div class="quick-stat-value" id="totalExpenses">0 ج.م</div>
+                </div>
+                <div class="quick-stat">
+                    <div class="quick-stat-label">
+                        <i class="fas fa-chart-pie"></i> المتبقي
+                    </div>
+                    <div class="quick-stat-value" id="remainingBudget">0 ج.م</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Add Expense Section -->
+            <div class="add-expense-section">
+                <div class="section-title">
+                    <i class="fas fa-plus-circle"></i> إضافة مصروف جديد
+                </div>
+                
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="expenseAmount"><i class="fas fa-money-bill"></i> المبلغ (ج.م)</label>
+                        <input type="number" id="expenseAmount" class="form-input" placeholder="0.00" min="0" step="0.01" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="expenseCategory"><i class="fas fa-tag"></i> الفئة</label>
+                        <select id="expenseCategory" class="form-select" required>
+                            <option value="">اختر الفئة</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="expenseDate"><i class="fas fa-calendar"></i> التاريخ</label>
+                        <input type="date" id="expenseDate" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="expenseNotes"><i class="fas fa-sticky-note"></i> ملاحظات (اختياري)</label>
+                        <input type="text" id="expenseNotes" class="form-input" placeholder="أضف ملاحظة...">
+                    </div>
+                </div>
+                
+                <button class="btn btn-primary" onclick="addExpense()">
+                    <i class="fas fa-plus"></i> إضافة المصروف
+                </button>
+            </div>
+
+            <!-- Recent Expenses -->
+            <div class="recent-expenses">
+                <div class="section-title">
+                    <i class="fas fa-history"></i> آخر المصروفات
+                </div>
+                
+                <div id="recentExpensesContainer">
+                    <div class="empty-state">
+                        <i class="fas fa-inbox"></i>
+                        <p>قم بإضافة أول مصروف لك</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Floating Action Button for Settings -->
+        <div class="fab" onclick="toggleSettingsMenu()">
+            <i class="fas fa-cog"></i>
+        </div>
+
+        <!-- Settings Menu -->
+        <div id="settingsMenu" class="settings-menu">
+            <div class="settings-item" onclick="manageCategories()">
+                <i class="fas fa-tags"></i> إدارة الفئات
+            </div>
+            <div class="settings-item" onclick="setMonthlyBudget()">
+                <i class="fas fa-piggy-bank"></i> تعيين الميزانية
+            </div>
+            <div class="settings-item" onclick="viewAllExpenses()">
+                <i class="fas fa-list"></i> عرض جميع المصروفات
+            </div>
+            <div class="settings-item" onclick="exportData()">
+                <i class="fas fa-download"></i> تصدير البيانات
+            </div>
+            <div class="settings-item" onclick="printReport()">
+                <i class="fas fa-print"></i> طباعة تقرير
+            </div>
+        </div>
+
+        <!-- Modals -->
+        <!-- Manage Categories Modal -->
+        <div id="manageCategoriesModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <span><i class="fas fa-tags"></i> إدارة الفئات</span>
+                    <button class="modal-close" onclick="hideModal('manageCategoriesModal')">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="form-group">
+                    <label for="newCategoryName">اسم الفئة الجديدة</label>
+                    <input type="text" id="newCategoryName" class="form-input" placeholder="مثال: الطعام">
+                </div>
+                <div class="form-group">
+                    <label>اختر لون الفئة</label>
+                    <div class="category-colors" id="colorPicker"></div>
+                </div>
+                <button class="btn btn-success" onclick="addCategory()" style="width: 100%; margin-bottom: 20px;">
+                    <i class="fas fa-plus"></i> إضافة الفئة
+                </button>
+                
+                <div id="existingCategories"></div>
+            </div>
+        </div>
+
+        <!-- Set Budget Modal -->
+        <div id="setBudgetModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <span><i class="fas fa-piggy-bank"></i> تعيين الميزانية الشهرية</span>
+                    <button class="modal-close" onclick="hideModal('setBudgetModal')">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="form-group">
+                    <label for="budgetAmount">المبلغ الشهري (ج.م)</label>
+                    <input type="number" id="budgetAmount" class="form-input" placeholder="أدخل الميزانية الشهرية" min="0" step="0.01">
+                </div>
+                <button class="btn btn-primary" onclick="setBudget()" style="width: 100%;">
+                    <i class="fas fa-check"></i> تعيين الميزانية
+                </button>
+            </div>
+        </div>
+
+        <!-- All Expenses Modal -->
+        <div id="allExpensesModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <span><i class="fas fa-list"></i> جميع المصروفات</span>
+                    <button class="modal-close" onclick="hideModal('allExpensesModal')">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div id="allExpensesContainer">
+                    <div class="empty-state">
+                        <i class="fas fa-inbox"></i>
+                        <p>لا توجد مصروفات</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Export Data Modal -->
+        <div id="exportDataModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <span><i class="fas fa-download"></i> تصدير البيانات</span>
+                    <button class="modal-close" onclick="hideModal('exportDataModal')">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div style="display: grid; gap: 15px;">
+                    <button class="btn btn-success" onclick="exportToCSV()">
+                        <i class="fas fa-file-csv"></i> تصدير CSV
+                    </button>
+                    <button class="btn btn-info" onclick="exportToJSON()">
+                        <i class="fas fa-file-code"></i> تصدير JSON
+                    </button>
+                    <button class="btn btn-primary" onclick="exportToPDF()">
+                        <i class="fas fa-file-pdf"></i> تصدير PDF
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============ Firebase Configuration ============
+        const firebaseConfig = {
+            apiKey: "AIzaSyCBVxpqtMCzKH2BTKr70gI9UUlbJuHzFEw",
+            authDomain: "masrof2-9e67a.firebaseapp.com",
+            databaseURL: "https://masrof2-9e67a-default-rtdb.firebaseio.com",
+            projectId: "masrof2-9e67a",
+            storageBucket: "masrof2-9e67a.firebasestorage.app",
+            messagingSenderId: "958997909952",
+            appId: "1:958997909952:web:975ba540314a6389abb825"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const database = firebase.database();
+
+        // ============ App Constants ============
+        const COLORS = [
+            { name: 'أحمر', code: '#ef4444' },
+            { name: 'أزرق', code: '#3b82f6' },
+            { name: 'أخضر', code: '#10b981' },
+            { name: 'أصفر', code: '#f59e0b' },
+            { name: 'بنفسجي', code: '#8b5cf6' },
+            { name: 'وردي', code: '#ec4899' },
+            { name: 'سماوي', code: '#06b6d4' },
+            { name: 'برتقالي', code: '#f97316' },
+            { name: 'أخضر داكن', code: '#059669' },
+            { name: 'أزرق داكن', code: '#1e40af' }
+        ];
+
+        let selectedColor = COLORS[0].code;
+        let currentUser = null;
+        let userData = {
+            expenses: [],
+            categories: [],
+            budget: 0,
+            profile: {
+                name: '',
+                email: ''
+            }
+        };
+
+        // ============ Authentication Functions ============
+        function showAuthForm(formType) {
+            document.querySelectorAll('.auth-tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.auth-form').forEach(form => form.classList.remove('active'));
+            
+            if (formType === 'login') {
+                document.querySelector('.auth-tab:nth-child(1)').classList.add('active');
+                document.getElementById('loginForm').classList.add('active');
+            } else {
+                document.querySelector('.auth-tab:nth-child(2)').classList.add('active');
+                document.getElementById('registerForm').classList.add('active');
+            }
+        }
+
+        function login() {
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+
+            if (!email || !password) {
+                alert('الرجاء إدخال البريد الإلكتروني وكلمة المرور');
+                return;
+            }
+
+            auth.signInWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    currentUser = userCredential.user;
+                    loadUserData();
+                })
+                .catch((error) => {
+                    alert('خطأ في تسجيل الدخول: ' + error.message);
+                });
+        }
+
+        function register() {
+            const name = document.getElementById('registerName').value;
+            const email = document.getElementById('registerEmail').value;
+            const password = document.getElementById('registerPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            if (!name || !email || !password || !confirmPassword) {
+                alert('الرجاء ملء جميع الحقول');
+                return;
+            }
+
+            if (password !== confirmPassword) {
+                alert('كلمتا المرور غير متطابقتين');
+                return;
+            }
+
+            auth.createUserWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    currentUser = userCredential.user;
+                    
+                    // Save user profile
+                    database.ref('users/' + currentUser.uid + '/profile').set({
+                        name: name,
+                        email: email,
+                        createdAt: new Date().toISOString()
+                    });
+
+                    // Initialize user data
+                    userData.profile.name = name;
+                    userData.profile.email = email;
+                    saveUserData();
+                    showApp();
+                })
+                .catch((error) => {
+                    alert('خطأ في إنشاء الحساب: ' + error.message);
+                });
+        }
+
+        function logout() {
+            auth.signOut().then(() => {
+                currentUser = null;
+                userData = { expenses: [], categories: [], budget: 0, profile: { name: '', email: '' } };
+                showAuth();
+            });
+        }
+
+        // ============ User Data Management ============
+        function loadUserData() {
+            if (!currentUser) return;
+
+            database.ref('users/' + currentUser.uid).once('value')
+                .then((snapshot) => {
+                    const data = snapshot.val();
+                    if (data) {
+                        userData.expenses = data.expenses || [];
+                        userData.categories = data.categories || [];
+                        userData.budget = data.budget || 0;
+                        userData.profile = data.profile || { name: currentUser.displayName || 'مستخدم', email: currentUser.email };
+                    }
+                    updateAllDisplays();
+                    showApp();
+                })
+                .catch((error) => {
+                    console.error('Error loading user data:', error);
+                });
+        }
+
+        function saveUserData() {
+            if (!currentUser) return;
+
+            database.ref('users/' + currentUser.uid).set(userData)
+                .then(() => {
+                    console.log('User data saved successfully');
+                })
+                .catch((error) => {
+                    console.error('Error saving user data:', error);
+                });
+        }
+
+        // ============ UI Functions ============
+        function showAuth() {
+            document.getElementById('authContainer').classList.add('show');
+            document.getElementById('appContainer').style.display = 'none';
+        }
+
+        function showApp() {
+            document.getElementById('authContainer').classList.remove('show');
+            document.getElementById('appContainer').style.display = 'block';
+            
+            // Update user info
+            document.getElementById('userName').textContent = userData.profile.name || 'مستخدم';
+            document.getElementById('userEmail').textContent = userData.profile.email || '';
+            
+            initializeApp();
+        }
+
+        function initializeApp() {
+            populateColors();
+            setDateToToday();
+            updateAllDisplays();
+        }
+
+        function toggleSettingsMenu() {
+            const menu = document.getElementById('settingsMenu');
+            menu.classList.toggle('show');
+        }
+
+        function hideSettingsMenu() {
+            document.getElementById('settingsMenu').classList.remove('show');
+        }
+
+        function showModal(modalId) {
+            hideSettingsMenu();
+            document.getElementById(modalId).classList.add('show');
+        }
+
+        function hideModal(modalId) {
+            document.getElementById(modalId).classList.remove('show');
+        }
+
+        // ============ Settings Menu Functions ============
+        function manageCategories() {
+            updateExistingCategories();
+            showModal('manageCategoriesModal');
+        }
+
+        function setMonthlyBudget() {
+            document.getElementById('budgetAmount').value = userData.budget || '';
+            showModal('setBudgetModal');
+        }
+
+        function viewAllExpenses() {
+            updateAllExpensesModal();
+            showModal('allExpensesModal');
+        }
+
+        function exportData() {
+            showModal('exportDataModal');
+        }
+
+        function printReport() {
+            const printWindow = window.open('', '_blank');
+            const totalExpenses = getTotalExpenses();
+            const remaining = userData.budget - totalExpenses;
+            
+            printWindow.document.write(`
+                <html>
+                <head>
+                    <title>تقرير المصروفات</title>
+                    <style>
+                        body { 
+                            font-family: Arial, sans-serif; 
+                            direction: rtl; 
+                            padding: 20px; 
+                        }
+                        h1, h2 { color: #333; }
+                        table { 
+                            width: 100%; 
+                            border-collapse: collapse; 
+                            margin: 20px 0; 
+                        }
+                        th, td { 
+                            border: 1px solid #ddd; 
+                            padding: 10px; 
+                            text-align: center; 
+                        }
+                        th { background: #f4f4f4; }
+                    </style>
+                </head>
+                <body>
+                    <h1>تقرير المصروفات</h1>
+                    <h2>المستخدم: ${userData.profile.name}</h2>
+                    <h3>التاريخ: ${new Date().toLocaleDateString('ar-EG')}</h3>
+                    <p>الميزانية: ${userData.budget.toFixed(2)} ج.م</p>
+                    <p>إجمالي المصروفات: ${totalExpenses.toFixed(2)} ج.م</p>
+                    <p>المتبقي: ${remaining.toFixed(2)} ج.م</p>
+                    
+                    <h2>المصروفات</h2>
+                    <table>
+                        <tr>
+                            <th>الفئة</th>
+                            <th>المبلغ</th>
+                            <th>التاريخ</th>
+                            <th>ملاحظات</th>
+                        </tr>
+                        ${userData.expenses.map(expense => {
+                            const category = userData.categories.find(cat => cat.id === expense.categoryId);
+                            return `
+                                <tr>
+                                    <td>${category ? category.name : 'غير محدد'}</td>
+                                    <td>${expense.amount.toFixed(2)} ج.م</td>
+                                    <td>${new Date(expense.date).toLocaleDateString('ar-EG')}</td>
+                                    <td>${expense.notes || '-'}</td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </table>
+                    <script>
+                        window.onload = () => window.print();
+                    <\/script>
+                </body>
+                </html>
+            `);
+        }
+
+        // ============ App Functions ============
+        function populateColors() {
+            const colorPicker = document.getElementById('colorPicker');
+            colorPicker.innerHTML = '';
+            COLORS.forEach(color => {
+                const colorOption = document.createElement('div');
+                colorOption.className = 'color-option' + (color.code === selectedColor ? ' selected' : '');
+                colorOption.style.background = color.code;
+                colorOption.textContent = color.name;
+                colorOption.onclick = () => selectColor(color.code);
+                colorPicker.appendChild(colorOption);
+            });
+        }
+
+        function selectColor(color) {
+            selectedColor = color;
+            populateColors();
+        }
+
+        function setDateToToday() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('expenseDate').value = today;
+            document.getElementById('expenseDate').min = today;
+        }
+
+        // ============ Budget Management ============
+        function setBudget() {
+            const amount = parseFloat(document.getElementById('budgetAmount').value);
+            if (isNaN(amount) || amount <= 0) {
+                alert('الرجاء إدخال ميزانية صحيحة');
+                return;
+            }
+            userData.budget = amount;
+            saveUserData();
+            updateAllDisplays();
+            hideModal('setBudgetModal');
+        }
+
+        // ============ Category Management ============
+        function addCategory() {
+            const name = document.getElementById('newCategoryName').value.trim();
+
+            if (!name) {
+                alert('الرجاء إدخال اسم الفئة');
+                return;
+            }
+
+            if (userData.categories.some(cat => cat.name === name)) {
+                alert('هذه الفئة موجودة بالفعل');
+                return;
+            }
+
+            userData.categories.push({
+                id: Date.now(),
+                name,
+                color: selectedColor
+            });
+
+            document.getElementById('newCategoryName').value = '';
+            selectedColor = COLORS[0].code;
+            populateColors();
+
+            saveUserData();
+            updateAllDisplays();
+            updateExistingCategories();
+        }
+
+        function updateExistingCategories() {
+            const container = document.getElementById('existingCategories');
+            if (!container) return;
+            
+            if (userData.categories.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #64748b; margin-top: 20px;">لا توجد فئات</p>';
+                return;
+            }
+
+            container.innerHTML = '<h3 style="margin: 20px 0 10px 0; color: #475569;">الفئات الحالية</h3>';
+            
+            userData.categories.forEach(category => {
+                const categoryDiv = document.createElement('div');
+                categoryDiv.className = 'expense-item';
+                categoryDiv.style.marginBottom = '10px';
+                categoryDiv.style.borderRightColor = category.color;
+                
+                categoryDiv.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div style="width: 15px; height: 15px; background: ${category.color}; border-radius: 50%;"></div>
+                        <strong>${category.name}</strong>
+                    </div>
+                    <button class="btn-danger" onclick="deleteCategory(${category.id})" style="padding: 5px 10px; font-size: 0.8em;">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                `;
+                
+                container.appendChild(categoryDiv);
+            });
+        }
+
+        function deleteCategory(categoryId) {
+            if (confirm('هل أنت متأكد من حذف هذه الفئة؟')) {
+                userData.categories = userData.categories.filter(cat => cat.id !== categoryId);
+                saveUserData();
+                updateAllDisplays();
+                updateExistingCategories();
+            }
+        }
+
+        // ============ Expense Management ============
+        function addExpense() {
+            const amount = parseFloat(document.getElementById('expenseAmount').value);
+            const categoryId = parseInt(document.getElementById('expenseCategory').value);
+            const date = document.getElementById('expenseDate').value;
+            const notes = document.getElementById('expenseNotes').value.trim();
+
+            if (isNaN(amount) || amount <= 0 || !categoryId || !date) {
+                alert('الرجاء ملء جميع الحقول المطلوبة');
+                return;
+            }
+
+            userData.expenses.push({
+                id: Date.now(),
+                amount,
+                categoryId,
+                date,
+                notes,
+                createdAt: new Date().toISOString()
+            });
+
+            document.getElementById('expenseAmount').value = '';
+            document.getElementById('expenseCategory').value = '';
+            document.getElementById('expenseNotes').value = '';
+            setDateToToday();
+
+            saveUserData();
+            updateAllDisplays();
+        }
+
+        function deleteExpense(expenseId) {
+            if (confirm('هل أنت متأكد من حذف هذا المصروف؟')) {
+                userData.expenses = userData.expenses.filter(exp => exp.id !== expenseId);
+                saveUserData();
+                updateAllDisplays();
+            }
+        }
+
+        // ============ Calculations ============
+        function getTotalExpenses() {
+            return userData.expenses.reduce((sum, exp) => sum + exp.amount, 0);
+        }
+
+        // ============ Update Displays ============
+        function updateAllDisplays() {
+            updateCategorySelect();
+            updateStatistics();
+            updateRecentExpenses();
+        }
+
+        function updateStatistics() {
+            const totalExpenses = getTotalExpenses();
+            const remaining = userData.budget - totalExpenses;
+
+            document.getElementById('totalBudget').textContent = userData.budget.toFixed(2) + ' ج.م';
+            document.getElementById('totalExpenses').textContent = totalExpenses.toFixed(2) + ' ج.م';
+            document.getElementById('remainingBudget').textContent = remaining.toFixed(2) + ' ج.م';
+            document.getElementById('remainingBudget').style.color = remaining >= 0 ? '#10b981' : '#ef4444';
+        }
+
+        function updateCategorySelect() {
+            const select = document.getElementById('expenseCategory');
+            select.innerHTML = '<option value="">اختر الفئة</option>';
+
+            userData.categories.forEach(category => {
+                const option = document.createElement('option');
+                option.value = category.id;
+                option.textContent = category.name;
+                select.appendChild(option);
+            });
+        }
+
+        function updateRecentExpenses() {
+            const container = document.getElementById('recentExpensesContainer');
+            const recentExpenses = userData.expenses
+                .sort((a, b) => new Date(b.date) - new Date(a.date))
+                .slice(0, 10);
+
+            if (recentExpenses.length === 0) {
+                container.innerHTML = '<div class="empty-state"><i class="fas fa-inbox"></i><p>قم بإضافة أول مصروف لك</p></div>';
+                return;
+            }
+
+            container.innerHTML = '';
+            recentExpenses.forEach(expense => {
+                const category = userData.categories.find(cat => cat.id === expense.categoryId);
+                
+                const item = document.createElement('div');
+                item.className = 'expense-item';
+                item.style.borderRightColor = category ? category.color : '#667eea';
+
+                item.innerHTML = `
+                    <div class="expense-info">
+                        <div class="expense-category">
+                            <div class="category-icon" style="background: ${category ? category.color : '#999'}">
+                                <i class="fas fa-tag"></i>
+                            </div>
+                            ${category ? category.name : 'غير محدد'}
+                        </div>
+                        <div class="expense-details">
+                            <div><i class="fas fa-calendar"></i> ${new Date(expense.date).toLocaleDateString('ar-EG')}</div>
+                            ${expense.notes ? `<div><i class="fas fa-sticky-note"></i> ${expense.notes}</div>` : ''}
+                        </div>
+                    </div>
+                    <div class="expense-amount">${expense.amount.toFixed(2)} ج.م</div>
+                    <div class="expense-actions">
+                        <button class="btn-danger" onclick="deleteExpense(${expense.id})" style="padding: 5px 10px;">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        function updateAllExpensesModal() {
+            const container = document.getElementById('allExpensesContainer');
+            const allExpenses = userData.expenses
+                .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            if (allExpenses.length === 0) {
+                container.innerHTML = '<div class="empty-state"><i class="fas fa-inbox"></i><p>لا توجد مصروفات</p></div>';
+                return;
+            }
+
+            container.innerHTML = '';
+            allExpenses.forEach(expense => {
+                const category = userData.categories.find(cat => cat.id === expense.categoryId);
+                
+                const item = document.createElement('div');
+                item.className = 'expense-item';
+                item.style.borderRightColor = category ? category.color : '#667eea';
+
+                item.innerHTML = `
+                    <div class="expense-info">
+                        <div class="expense-category">
+                            <div class="category-icon" style="background: ${category ? category.color : '#999'}">
+                                <i class="fas fa-tag"></i>
+                            </div>
+                            ${category ? category.name : 'غير محدد'}
+                        </div>
+                        <div class="expense-details">
+                            <div><i class="fas fa-calendar"></i> ${new Date(expense.date).toLocaleDateString('ar-EG')}</div>
+                            ${expense.notes ? `<div><i class="fas fa-sticky-note"></i> ${expense.notes}</div>` : ''}
+                        </div>
+                    </div>
+                    <div class="expense-amount">${expense.amount.toFixed(2)} ج.م</div>
+                    <div class="expense-actions">
+                        <button class="btn-danger" onclick="deleteExpense(${expense.id})" style="padding: 5px 10px;">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        // ============ Export Functions ============
+        function exportToCSV() {
+            let csv = 'الفئة,المبلغ,التاريخ,الملاحظات\n';
+            userData.expenses.forEach(expense => {
+                const category = userData.categories.find(cat => cat.id === expense.categoryId);
+                csv += `${category ? category.name : ''},${expense.amount},${expense.date},"${expense.notes || ''}"\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `مصروفات_${new Date().toLocaleDateString('ar-EG')}.csv`;
+            link.click();
+            hideModal('exportDataModal');
+        }
+
+        function exportToJSON() {
+            const data = {
+                user: userData.profile,
+                budget: userData.budget,
+                categories: userData.categories,
+                expenses: userData.expenses,
+                exportDate: new Date().toISOString()
+            };
+
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `مصروفات_${new Date().toLocaleDateString('ar-EG')}.json`;
+            link.click();
+            hideModal('exportDataModal');
+        }
+
+        function exportToPDF() {
+            printReport();
+        }
+
+        // ============ Firebase Auth State Listener ============
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                currentUser = user;
+                loadUserData();
+            } else {
+                showAuth();
+            }
+        });
+
+        // ============ Initial Setup ============
+        document.addEventListener('DOMContentLoaded', () => {
+            setDateToToday();
+            
+            // Close settings menu when clicking outside
+            document.addEventListener('click', (e) => {
+                const settingsMenu = document.getElementById('settingsMenu');
+                const settingsBtn = document.querySelector('.fab');
+                
+                if (settingsMenu && settingsMenu.classList.contains('show') && 
+                    !settingsMenu.contains(e.target) && 
+                    !settingsBtn.contains(e.target)) {
+                    hideSettingsMenu();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
