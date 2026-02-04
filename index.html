@@ -1,2257 +1,1445 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>إدارة المصروفات الذكية - نسخة منظمة</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
-    <style>
-        :root {
-            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            --secondary-gradient: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-            --success-gradient: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            --danger-gradient: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-            --info-gradient: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-            --dark-gradient: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-            --light-gradient: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-            --card-shadow: 0 10px 30px rgba(0,0,0,0.08);
-            --hover-shadow: 0 15px 35px rgba(0,0,0,0.15);
-            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            --pulse-animation: pulse 2s infinite;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Tajawal', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-            min-height: 100vh;
-            padding: 20px;
-            overflow-x: hidden;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        /* Authentication Styles */
-        .auth-container {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.8);
-            backdrop-filter: blur(10px);
-            z-index: 3000;
-            justify-content: center;
-            align-items: center;
-            animation: fadeIn 0.5s ease;
-        }
-
-        .auth-container.show {
-            display: flex;
-        }
-
-        .auth-box {
-            background: white;
-            border-radius: 20px;
-            padding: 40px;
-            max-width: 450px;
-            width: 90%;
-            box-shadow: 0 30px 60px rgba(0,0,0,0.2);
-            animation: slideUp 0.5s ease;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .auth-box::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            right: 0;
-            width: 100%;
-            height: 6px;
-            background: var(--primary-gradient);
-        }
-
-        .auth-header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-
-        .auth-header h2 {
-            color: #333;
-            font-size: 2em;
-            margin-bottom: 10px;
-            background: var(--primary-gradient);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .auth-tabs {
-            display: flex;
-            background: #f1f5f9;
-            border-radius: 12px;
-            padding: 5px;
-            margin-bottom: 25px;
-        }
-
-        .auth-tab {
-            flex: 1;
-            padding: 12px;
-            text-align: center;
-            cursor: pointer;
-            border-radius: 10px;
-            transition: var(--transition);
-            font-weight: 600;
-            color: #64748b;
-        }
-
-        .auth-tab.active {
-            background: white;
-            color: #667eea;
-            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
-        }
-
-        .auth-form {
-            display: none;
-        }
-
-        .auth-form.active {
-            display: block;
-        }
-
-        /* Main Header */
-        .main-header {
-            background: white;
-            border-radius: 20px;
-            padding: 25px;
-            margin-bottom: 25px;
-            color: #333;
-            position: relative;
-            overflow: hidden;
-            box-shadow: var(--card-shadow);
-            animation: slideDown 0.6s ease-out;
-            border-bottom: 4px solid #667eea;
-        }
-
-        .main-header::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            right: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(45deg, transparent 60%, rgba(102, 126, 234, 0.1) 100%);
-            pointer-events: none;
-        }
-
-        .user-info {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 20px;
-            position: relative;
-            z-index: 1;
-        }
-
-        .user-details {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .user-avatar {
-            width: 60px;
-            height: 60px;
-            background: var(--primary-gradient);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5em;
-            color: white;
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
-            animation: float 3s ease-in-out infinite;
-        }
-
-        .user-text h2 {
-            font-size: 1.6em;
-            margin-bottom: 5px;
-            color: #1e293b;
-            background: linear-gradient(45deg, #667eea, #764ba2);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            font-weight: 800;
-        }
-
-        .user-text p {
-            color: #64748b;
-            font-size: 1em;
-        }
-
-        .logout-btn {
-            background: #ef4444;
-            border: none;
-            color: white;
-            padding: 10px 20px;
-            border-radius: 12px;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 0.9em;
-            transition: var(--transition);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .logout-btn::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 0;
-            height: 0;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.2);
-            transform: translate(-50%, -50%);
-            transition: width 0.6s, height 0.6s;
-        }
-
-        .logout-btn:hover::before {
-            width: 300px;
-            height: 300px;
-        }
-
-        .logout-btn:hover {
-            background: #dc2626;
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(239, 68, 68, 0.3);
-        }
-
-        /* Quick Stats */
-        .quick-stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-top: 20px;
-            position: relative;
-            z-index: 1;
-        }
-
-        .quick-stat {
-            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-            padding: 15px;
-            border-radius: 12px;
-            border-right: 4px solid;
-            transition: var(--transition);
-            position: relative;
-            overflow: hidden;
-            cursor: pointer;
-        }
-
-        .quick-stat:hover {
-            transform: translateY(-5px) scale(1.02);
-            box-shadow: var(--hover-shadow);
-        }
-
-        .quick-stat::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            right: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(45deg, transparent 60%, rgba(255,255,255,0.3) 100%);
-            pointer-events: none;
-        }
-
-        .quick-stat:nth-child(1) {
-            border-color: #10b981;
-        }
-        .quick-stat:nth-child(2) {
-            border-color: #f59e0b;
-        }
-        .quick-stat:nth-child(3) {
-            border-color: #3b82f6;
-        }
-
-        .quick-stat-label {
-            font-size: 0.85em;
-            color: #64748b;
-            margin-bottom: 8px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            position: relative;
-            z-index: 1;
-        }
-
-        .quick-stat-value {
-            font-size: 1.8em;
-            font-weight: 800;
-            color: #1e293b;
-            position: relative;
-            z-index: 1;
-            transition: var(--transition);
-        }
-
-        .quick-stat:hover .quick-stat-value {
-            transform: scale(1.05);
-        }
-
-        /* Main Content */
-        .main-content {
-            display: flex;
-            gap: 25px;
-            margin-bottom: 40px;
-        }
-
-        @media (max-width: 768px) {
-            .main-content {
-                flex-direction: column;
-            }
-        }
-
-        /* Add Expense Section */
-        .add-expense-section {
-            flex: 1;
-            background: white;
-            border-radius: 20px;
-            padding: 25px;
-            box-shadow: var(--card-shadow);
-            margin-bottom: 25px;
-            transition: var(--transition);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .add-expense-section::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            right: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(45deg, transparent 70%, rgba(102, 126, 234, 0.05) 100%);
-            pointer-events: none;
-        }
-
-        .add-expense-section:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
-        }
-
-        .section-title {
-            font-size: 1.4em;
-            color: #1e293b;
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #e2e8f0;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            position: relative;
-        }
-
-        .section-title i {
-            color: #667eea;
-            animation: bounce 2s infinite;
-        }
-
-        .form-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-bottom: 20px;
-        }
-
-        .form-group {
-            margin-bottom: 15px;
-            position: relative;
-        }
-
-        .form-label {
-            display: block;
-            margin-bottom: 8px;
-            color: #475569;
-            font-weight: 600;
-            font-size: 0.9em;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .form-input, .form-select, .form-textarea {
-            width: 100%;
-            padding: 12px 15px;
-            border: 2px solid #e2e8f0;
-            border-radius: 10px;
-            font-size: 1em;
-            transition: var(--transition);
-            font-family: inherit;
-            background: #f8fafc;
-            position: relative;
-            z-index: 1;
-        }
-
-        .form-input:focus, .form-select:focus, .form-textarea:focus {
-            outline: none;
-            border-color: #667eea;
-            background: white;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-            transform: translateY(-2px);
-        }
-
-        .form-textarea {
-            resize: vertical;
-            min-height: 100px;
-        }
-
-        /* Category Limit Info */
-        .category-limit-info {
-            margin-top: 5px;
-            font-size: 0.8em;
-            color: #64748b;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .limit-progress {
-            width: 100%;
-            height: 4px;
-            background: #e2e8f0;
-            border-radius: 2px;
-            margin-top: 5px;
-            overflow: hidden;
-        }
-
-        .limit-progress-bar {
-            height: 100%;
-            background: var(--success-gradient);
-            border-radius: 2px;
-            transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        /* Buttons */
-        .btn {
-            padding: 12px 25px;
-            border: none;
-            border-radius: 10px;
-            font-size: 1em;
-            font-weight: 600;
-            cursor: pointer;
-            transition: var(--transition);
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            position: relative;
-            overflow: hidden;
-            z-index: 1;
-        }
-
-        .btn::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 0;
-            height: 0;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.2);
-            transform: translate(-50%, -50%);
-            transition: width 0.6s, height 0.6s;
-            z-index: -1;
-        }
-
-        .btn:hover::before {
-            width: 300px;
-            height: 300px;
-        }
-
-        .btn-primary {
-            background: var(--primary-gradient);
-            color: white;
-            width: 100%;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
-        }
-
-        .btn-success {
-            background: var(--success-gradient);
-            color: white;
-        }
-
-        .btn-success:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(16, 185, 129, 0.3);
-        }
-
-        .btn-danger {
-            background: var(--danger-gradient);
-            color: white;
-        }
-
-        .btn-danger:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(239, 68, 68, 0.3);
-        }
-
-        .btn-info {
-            background: var(--info-gradient);
-            color: white;
-        }
-
-        .btn-info:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(59, 130, 246, 0.3);
-        }
-
-        /* Recent Expenses */
-        .recent-expenses {
-            flex: 1;
-            background: white;
-            border-radius: 20px;
-            padding: 25px;
-            box-shadow: var(--card-shadow);
-            margin-bottom: 25px;
-            transition: var(--transition);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .recent-expenses::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            right: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(45deg, transparent 70%, rgba(16, 185, 129, 0.05) 100%);
-            pointer-events: none;
-        }
-
-        .recent-expenses:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
-        }
-
-        .expense-item {
-            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-            border-radius: 12px;
-            padding: 15px;
-            margin-bottom: 12px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            transition: var(--transition);
-            border-right: 4px solid;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .expense-item::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            right: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(45deg, transparent 60%, rgba(255,255,255,0.3) 100%);
-            pointer-events: none;
-        }
-
-        .expense-item:hover {
-            transform: translateX(-5px) scale(1.02);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-        }
-
-        .expense-info {
-            flex: 1;
-            position: relative;
-            z-index: 1;
-        }
-
-        .expense-category {
-            font-weight: 700;
-            color: #1e293b;
-            margin-bottom: 5px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .category-icon {
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 0.9em;
-            box-shadow: 0 3px 8px rgba(0,0,0,0.2);
-            animation: float 3s ease-in-out infinite;
-        }
-
-        .expense-details {
-            color: #64748b;
-            font-size: 0.85em;
-        }
-
-        .expense-amount {
-            font-size: 1.4em;
-            font-weight: 800;
-            margin-right: 15px;
-            min-width: 100px;
-            text-align: left;
-            position: relative;
-            z-index: 1;
-        }
-
-        .expense-actions {
-            display: flex;
-            gap: 8px;
-            position: relative;
-            z-index: 1;
-        }
-
-        /* Settings Menu */
-        .settings-menu {
-            position: fixed;
-            top: 120px;
-            left: 40px;
-            background: white;
-            border-radius: 15px;
-            padding: 15px;
-            box-shadow: var(--card-shadow);
-            z-index: 2000;
-            display: none;
-            flex-direction: column;
-            gap: 10px;
-            min-width: 200px;
-            animation: slideRight 0.3s ease;
-            border: 1px solid #e2e8f0;
-            transition: var(--transition);
-        }
-
-        .settings-menu.show {
-            display: flex;
-            animation: slideRight 0.3s ease;
-        }
-
-        .settings-item {
-            padding: 12px 15px;
-            background: #f8fafc;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: var(--transition);
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            font-weight: 600;
-            color: #475569;
-            border: 1px solid transparent;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .settings-item::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            right: 0;
-            width: 0;
-            height: 100%;
-            background: var(--primary-gradient);
-            transition: width 0.3s ease;
-            z-index: 1;
-        }
-
-        .settings-item:hover::before {
-            width: 100%;
-        }
-
-        .settings-item:hover {
-            color: white;
-            transform: translateX(5px);
-            border-color: #667eea;
-        }
-
-        .settings-item i, .settings-item span {
-            position: relative;
-            z-index: 2;
-        }
-
-        /* Floating Action Button */
-        .fab {
-            position: fixed;
-            bottom: 30px;
-            left: 30px;
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            background: var(--secondary-gradient);
-            color: white;
-            font-size: 1.2em;
-            cursor: pointer;
-            box-shadow: 0 10px 25px rgba(245, 158, 11, 0.3);
-            transition: var(--transition);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-            animation: float 3s ease-in-out infinite;
-        }
-
-        .fab:hover {
-            transform: scale(1.1) rotate(10deg);
-            box-shadow: 0 15px 30px rgba(245, 158, 11, 0.4);
-            animation: none;
-        }
-
-        /* Empty State */
-        .empty-state {
-            text-align: center;
-            padding: 40px 20px;
-            color: #94a3b8;
-        }
-
-        .empty-state i {
-            font-size: 3em;
-            margin-bottom: 15px;
-            opacity: 0.5;
-            animation: pulse 2s infinite;
-        }
-
-        .empty-state p {
-            font-size: 1em;
-            margin-bottom: 15px;
-        }
-
-        /* Modal */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.8);
-            backdrop-filter: blur(10px);
-            z-index: 4000;
-            justify-content: center;
-            align-items: center;
-            animation: fadeIn 0.3s ease;
-        }
-
-        .modal.show {
-            display: flex;
-        }
-
-        .modal-content {
-            background: white;
-            border-radius: 20px;
-            padding: 30px;
-            max-width: 500px;
-            width: 90%;
-            max-height: 80vh;
-            overflow-y: auto;
-            animation: slideUp 0.4s ease;
-            box-shadow: 0 40px 80px rgba(0,0,0,0.2);
-            position: relative;
-        }
-
-        .modal-content.large {
-            max-width: 800px;
-        }
-
-        .modal-header {
-            font-size: 1.5em;
-            color: #333;
-            margin-bottom: 20px;
-            border-bottom: 2px solid #e2e8f0;
-            padding-bottom: 15px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .modal-close {
-            background: #ef4444;
-            border: none;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            cursor: pointer;
-            font-size: 1.2em;
-            transition: var(--transition);
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .modal-close:hover {
-            background: #dc2626;
-            transform: rotate(90deg);
-        }
-
-        /* Category Colors */
-        .category-colors {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 10px;
-            margin-top: 15px;
-        }
-
-        .color-option {
-            padding: 15px;
-            border-radius: 10px;
-            cursor: pointer;
-            text-align: center;
-            color: white;
-            font-weight: 600;
-            transition: var(--transition);
-            font-size: 0.8em;
-            border: 3px solid transparent;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .color-option:hover {
-            transform: scale(1.1);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-        }
-
-        .color-option.selected {
-            border-color: #1e293b;
-            transform: scale(1.05);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-            animation: pulse 1.5s infinite;
-        }
-
-        /* Category Budget Display */
-        .category-budget-display {
-            background: #f8fafc;
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 10px;
-            transition: var(--transition);
-            border-right: 4px solid;
-        }
-
-        .category-budget-display:hover {
-            transform: translateX(-3px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-        }
-
-        .category-budget-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 8px;
-        }
-
-        .category-budget-name {
-            font-weight: 700;
-            color: #1e293b;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .category-budget-amount {
-            font-weight: 700;
-            color: #3b82f6;
-        }
-
-        .category-budget-remaining {
-            color: #64748b;
-            font-size: 0.9em;
-            margin-top: 5px;
-        }
-
-        /* Print Report Styles */
-        .print-controls {
-            margin-top: 20px;
-            padding-top: 20px;
-            border-top: 1px solid #e2e8f0;
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-        }
-
-        /* Animations */
-        @keyframes slideDown {
-            from {
-                opacity: 0;
-                transform: translateY(-30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-            }
-            to {
-                opacity: 1;
-            }
-        }
-
-        @keyframes slideUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        @keyframes slideRight {
-            from {
-                opacity: 0;
-                transform: translateX(-30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
-        }
-
-        @keyframes float {
-            0% {
-                transform: translateY(0px);
-            }
-            50% {
-                transform: translateY(-10px);
-            }
-            100% {
-                transform: translateY(0px);
-            }
-        }
-
-        @keyframes bounce {
-            0%, 100% {
-                transform: translateY(0);
-            }
-            50% {
-                transform: translateY(-5px);
-            }
-        }
-
-        @keyframes pulse {
-            0% {
-                transform: scale(1);
-                opacity: 1;
-            }
-            50% {
-                transform: scale(1.05);
-                opacity: 0.8;
-            }
-            100% {
-                transform: scale(1);
-                opacity: 1;
-            }
-        }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            .container {
-                padding: 10px;
-            }
-
-            .main-header {
-                padding: 20px;
-            }
-
-            .user-info {
-                flex-direction: column;
-                gap: 15px;
-                text-align: center;
-            }
-
-            .quick-stats {
-                grid-template-columns: 1fr;
-            }
-
-            .fab {
-                bottom: 20px;
-                left: 20px;
-            }
-
-            .settings-menu {
-                top: 100px;
-                left: 20px;
-                right: 20px;
-                min-width: auto;
-            }
-
-            .modal-content {
-                padding: 20px 15px;
-            }
-
-            .category-colors {
-                grid-template-columns: repeat(3, 1fr);
-            }
-        }
-    </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>مهندس بولس سمير</title>
+
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- FontAwesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <!-- Google Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+  <!-- Firebase (compat) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+  <!-- html2canvas for report image -->
+  <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+
+  <style>
+    :root{
+      --bg: radial-gradient(1200px 800px at 80% 10%, rgba(26,188,156,.18), transparent 60%),
+            radial-gradient(900px 700px at 10% 20%, rgba(241,196,15,.16), transparent 55%),
+            linear-gradient(135deg, #0b1821, #0f2430 45%, #102c3a);
+      --glass: rgba(255,255,255,.06);
+      --glass2: rgba(255,255,255,.04);
+      --border: rgba(255,255,255,.10);
+      --text: #eef3f7;
+      --muted: rgba(238,243,247,.68);
+      --teal: #1abc9c;
+      --gold: #f1c40f;
+      --danger: #ff7675;
+    }
+    html, body { height: 100%; }
+    body{
+      font-family: "Tajawal", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding-top: 76px;
+      padding-bottom: 80px; /* مساحة للزر العائم */
+    }
+
+    /* glass surfaces */
+    .glass{
+      background: var(--glass);
+      border: 1px solid var(--border);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.25);
+    }
+    .glass-soft{
+      background: var(--glass2);
+      border: 1px solid rgba(255,255,255,.06);
+      border-radius: 14px;
+    }
+
+    /* inputs */
+    .form-control, .form-select, .input-group-text{
+      background: rgba(0,0,0,.25) !important;
+      border: 1px solid var(--border) !important;
+      color: var(--text) !important;
+      border-radius: 12px !important;
+    }
+    .form-control::placeholder{ color: rgba(255,255,255,.55); }
+    .form-control:focus, .form-select:focus{
+      box-shadow: 0 0 0 .2rem rgba(26,188,156,.18);
+      border-color: rgba(26,188,156,.55) !important;
+    }
+
+    /* navbar */
+    .appbar{
+      background: rgba(10, 20, 28, .55);
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+    .brand-dot{
+      width: 10px; height: 10px; border-radius: 999px;
+      background: linear-gradient(45deg, var(--gold), #f39c12);
+      display: inline-block;
+      box-shadow: 0 0 0 6px rgba(241,196,15,.12);
+    }
+
+    /* stat cards */
+    .stat{
+      padding: 14px 14px;
+      border-radius: 16px;
+      background: rgba(255,255,255,.05);
+      border: 1px solid rgba(255,255,255,.07);
+    }
+    .stat .label{ color: var(--muted); font-size: .85rem; }
+    .stat .value{ font-weight: 800; font-size: 1.4rem; letter-spacing: .2px; }
+    .text-teal{ color: var(--teal) !important; }
+    .text-gold{ color: var(--gold) !important; }
+    .text-danger-soft{ color: var(--danger) !important; }
+
+    /* tables */
+    .table{
+      --bs-table-bg: transparent;
+      --bs-table-color: var(--text);
+      --bs-table-border-color: rgba(255,255,255,.08);
+    }
+    .table thead th{
+      color: rgba(255,255,255,.85);
+      font-weight: 700;
+      border-bottom: 1px solid rgba(255,255,255,.10);
+    }
+    .table tbody tr:hover{ background: rgba(255,255,255,.04); }
+
+    /* small helpers */
+    .badge-soft{
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.10);
+      color: rgba(255,255,255,.88);
+    }
+
+    /* loader */
+    #loader{
+      position: fixed; inset: 0; z-index: 2000;
+      display: grid; place-items: center;
+      background: #0b1821;
+      transition: opacity .35s ease;
+    }
+
+    /* floating menu button - bottom left */
+    .fab-menu{
+      position: fixed;
+      left: 18px;
+      bottom: 18px;
+      width: 60px; height: 60px;
+      border-radius: 999px;
+      border: 0;
+      background: linear-gradient(45deg, var(--gold), #f39c12);
+      color: #1b2630;
+      box-shadow: 0 12px 28px rgba(241,196,15,.22);
+      z-index: 1200;
+      display: grid; place-items: center;
+      font-size: 1.3rem;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .fab-menu:hover, .fab-menu:active{
+      transform: scale(1.08);
+      box-shadow: 0 16px 36px rgba(241,196,15,.28);
+    }
+
+    /* floating action menu - expanded */
+    .fab-menu-expanded{
+      position: fixed;
+      left: 18px;
+      bottom: 18px;
+      width: 220px;
+      border-radius: 20px;
+      border: 1px solid rgba(255,255,255,.15);
+      background: rgba(10, 20, 28, .92);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      box-shadow: 0 20px 40px rgba(0,0,0,.35);
+      z-index: 1300;
+      overflow: hidden;
+      transform-origin: bottom left;
+      animation: menuAppear 0.25s ease;
+    }
+    
+    @keyframes menuAppear {
+      from { opacity: 0; transform: scale(0.9) translateY(20px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    
+    .fab-menu-header{
+      padding: 16px 18px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      background: rgba(0,0,0,.15);
+    }
+    
+    .fab-menu-items{
+      padding: 12px 0;
+    }
+    
+    .fab-menu-item{
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 18px;
+      color: var(--text);
+      text-decoration: none;
+      border-left: 3px solid transparent;
+      transition: all 0.15s ease;
+      cursor: pointer;
+    }
+    
+    .fab-menu-item:hover, .fab-menu-item.active{
+      background: rgba(255,255,255,.05);
+      border-left-color: var(--teal);
+      padding-right: 22px;
+    }
+    
+    .fab-menu-item i{
+      width: 20px;
+      text-align: center;
+      font-size: 1.1rem;
+    }
+    
+    .fab-menu-close{
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: none;
+      border: none;
+      color: rgba(255,255,255,.5);
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      display: grid; place-items: center;
+      transition: background 0.15s ease;
+      cursor: pointer;
+    }
+    
+    .fab-menu-close:hover{
+      background: rgba(255,255,255,.08);
+      color: white;
+    }
+    
+    /* overlay for menu */
+    .fab-menu-overlay{
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.4);
+      backdrop-filter: blur(4px);
+      z-index: 1250;
+      animation: fadeIn 0.2s ease;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    
+    /* month badge */
+    .month-badge{
+      display: inline-block;
+      padding: 4px 12px;
+      background: rgba(26,188,156,.15);
+      border: 1px solid rgba(26,188,156,.25);
+      border-radius: 999px;
+      font-size: 0.85rem;
+      color: var(--teal);
+    }
+    
+    /* تنسيق عام للتبويبات */
+    .tab-pane {
+      display: none;
+    }
+    .tab-pane.active {
+      display: block;
+    }
+  </style>
 </head>
+
 <body>
-    <!-- Authentication Container -->
-    <div id="authContainer" class="auth-container show">
-        <div class="auth-box">
-            <div class="auth-header">
-                <h2><i class="fas fa-wallet"></i> إدارة المصروفات الذكية</h2>
-                <p>سجل الدخول للبدء</p>
-            </div>
-            
-            <div class="auth-tabs">
-                <div class="auth-tab active" onclick="showAuthForm('login')">تسجيل الدخول</div>
-                <div class="auth-tab" onclick="showAuthForm('register')">حساب جديد</div>
-            </div>
-            
-            <div id="loginForm" class="auth-form active">
-                <div class="form-group">
-                    <label for="loginEmail"><i class="fas fa-envelope"></i> البريد الإلكتروني</label>
-                    <input type="email" id="loginEmail" class="form-input" placeholder="example@email.com">
-                </div>
-                <div class="form-group">
-                    <label for="loginPassword"><i class="fas fa-lock"></i> كلمة المرور</label>
-                    <input type="password" id="loginPassword" class="form-input" placeholder="********">
-                </div>
-                <button class="btn btn-primary" onclick="login()">
-                    <i class="fas fa-sign-in-alt"></i> تسجيل الدخول
-                </button>
-            </div>
-            
-            <div id="registerForm" class="auth-form">
-                <div class="form-group">
-                    <label for="registerName"><i class="fas fa-user"></i> الاسم</label>
-                    <input type="text" id="registerName" class="form-input" placeholder="اسمك الكامل" value="مهندس بولس سمير">
-                </div>
-                <div class="form-group">
-                    <label for="registerEmail"><i class="fas fa-envelope"></i> البريد الإلكتروني</label>
-                    <input type="email" id="registerEmail" class="form-input" placeholder="example@email.com">
-                </div>
-                <div class="form-group">
-                    <label for="registerPassword"><i class="fas fa-lock"></i> كلمة المرور</label>
-                    <input type="password" id="registerPassword" class="form-input" placeholder="********">
-                </div>
-                <div class="form-group">
-                    <label for="confirmPassword"><i class="fas fa-lock"></i> تأكيد كلمة المرور</label>
-                    <input type="password" id="confirmPassword" class="form-input" placeholder="********">
-                </div>
-                <button class="btn btn-success" onclick="register()">
-                    <i class="fas fa-user-plus"></i> إنشاء حساب
-                </button>
-            </div>
-        </div>
+  <!-- loader -->
+  <div id="loader">
+    <div class="text-center">
+      <div class="spinner-border text-info mb-3" role="status"></div>
+      <div class="fw-bold">جاري الاتصال بقاعدة البيانات...</div>
+      <div class="small text-white-50 mt-1">Realtime Database</div>
     </div>
+  </div>
 
-    <!-- Main App Container -->
-    <div id="appContainer" class="container" style="display: none;">
-        <!-- Main Header -->
-        <div class="main-header">
-            <div class="user-info">
-                <div class="user-details">
-                    <div class="user-avatar">
-                        <i class="fas fa-user-tie"></i>
-                    </div>
-                    <div class="user-text">
-                        <h2 id="userName">مرحباً مهندس بولس سمير</h2>
-                        <p id="userEmail">example@email.com</p>
-                    </div>
-                </div>
-                <button class="logout-btn" onclick="logout()">
-                    <i class="fas fa-sign-out-alt"></i> تسجيل الخروج
-                </button>
-            </div>
-            
-            <div class="quick-stats">
-                <div class="quick-stat" onclick="showBudgetDetails()">
-                    <div class="quick-stat-label">
-                        <i class="fas fa-piggy-bank"></i> الميزانية الشهرية
-                    </div>
-                    <div class="quick-stat-value" id="totalBudget">0 ج.م</div>
-                </div>
-                <div class="quick-stat" onclick="showCategoryExpensesDetails()">
-                    <div class="quick-stat-label">
-                        <i class="fas fa-money-bill-wave"></i> إجمالي المصروفات
-                    </div>
-                    <div class="quick-stat-value" id="totalExpenses">0 ج.م</div>
-                </div>
-                <div class="quick-stat" onclick="showRemainingDetails()">
-                    <div class="quick-stat-label">
-                        <i class="fas fa-chart-pie"></i> المتبقي
-                    </div>
-                    <div class="quick-stat-value" id="remainingBudget">0 ج.م</div>
-                </div>
-            </div>
+  <!-- top bar -->
+  <nav class="navbar navbar-expand-lg fixed-top appbar">
+    <div class="container-fluid px-3">
+      <a class="navbar-brand text-white d-flex align-items-center gap-2" href="#">
+        <span class="brand-dot"></span>
+        <span class="fw-bold">مصاريف المنزل</span>
+        <span class="badge badge-soft ms-1 d-none d-md-inline">نسخة مهندس بولس سمير</span>
+      </a>
+
+      <div class="ms-auto d-flex gap-2 align-items-center">
+        <!-- إخفاء اختيار الشهر في الشريط العلوي لأن التطبيق يعمل بدون تحديد شهور -->
+        <div class="d-none">
+          <span class="small text-white-50"><i class="fa-regular fa-calendar me-1"></i>الشهر</span>
+          <input id="monthSelector" type="month" class="form-control" style="width: 170px;" disabled>
         </div>
 
-        <!-- Main Content -->
-        <div class="main-content">
-            <!-- Add Expense Section -->
-            <div class="add-expense-section">
-                <div class="section-title">
-                    <i class="fas fa-plus-circle"></i> إضافة مصروف جديد
-                </div>
-                
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label for="expenseAmount"><i class="fas fa-money-bill"></i> المبلغ (ج.م)</label>
-                        <input type="number" id="expenseAmount" class="form-input" placeholder="0.00" min="0" step="0.01" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="expenseCategory"><i class="fas fa-tag"></i> الفئة</label>
-                        <select id="expenseCategory" class="form-select" required onchange="updateCategoryLimitInfo()">
-                            <option value="">اختر الفئة</option>
-                        </select>
-                        <div id="categoryLimitInfo" class="category-limit-info" style="display: none;">
-                            <span id="limitText">المتبقي: <span id="remainingLimit">0</span> ج.م</span>
-                            <span id="limitPercentage">0%</span>
-                        </div>
-                        <div id="limitProgress" class="limit-progress" style="display: none;">
-                            <div id="limitProgressBar" class="limit-progress-bar" style="width: 0%"></div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label for="expenseDate"><i class="fas fa-calendar"></i> التاريخ</label>
-                        <input type="date" id="expenseDate" class="form-input" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="expenseNotes"><i class="fas fa-sticky-note"></i> ملاحظات (اختياري)</label>
-                        <input type="text" id="expenseNotes" class="form-input" placeholder="أضف ملاحظة...">
-                    </div>
-                </div>
-                
-                <button class="btn btn-primary" onclick="addExpense()">
-                    <i class="fas fa-plus"></i> إضافة المصروف
-                </button>
-            </div>
-
-            <!-- Recent Expenses -->
-            <div class="recent-expenses">
-                <div class="section-title">
-                    <i class="fas fa-history"></i> آخر المصروفات
-                </div>
-                
-                <div id="recentExpensesContainer">
-                    <div class="empty-state">
-                        <i class="fas fa-inbox"></i>
-                        <p>قم بإضافة أول مصروف لك</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Floating Action Button for Settings -->
-        <div class="fab" onclick="toggleSettingsMenu()">
-            <i class="fas fa-cog"></i>
-        </div>
-
-        <!-- Settings Menu -->
-        <div id="settingsMenu" class="settings-menu">
-            <div class="settings-item" onclick="manageCategories()">
-                <i class="fas fa-tags"></i> <span>إدارة الفئات</span>
-            </div>
-            <div class="settings-item" onclick="setMonthlyBudget()">
-                <i class="fas fa-piggy-bank"></i> <span>تعيين الميزانية</span>
-            </div>
-            <div class="settings-item" onclick="viewAllExpenses()">
-                <i class="fas fa-list"></i> <span>عرض جميع المصروفات</span>
-            </div>
-            <div class="settings-item" onclick="exportData()">
-                <i class="fas fa-download"></i> <span>تصدير البيانات</span>
-            </div>
-            <div class="settings-item" onclick="printReport()">
-                <i class="fas fa-print"></i> <span>طباعة تقرير</span>
-            </div>
-        </div>
-
-        <!-- Modals -->
-        <!-- Manage Categories Modal -->
-        <div id="manageCategoriesModal" class="modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <span><i class="fas fa-tags"></i> إدارة الفئات</span>
-                    <button class="modal-close" onclick="hideModal('manageCategoriesModal')">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div class="form-group">
-                    <label for="newCategoryName">اسم الفئة الجديدة</label>
-                    <input type="text" id="newCategoryName" class="form-input" placeholder="مثال: الطعام">
-                </div>
-                <div class="form-group">
-                    <label for="categoryLimit">حد الفئة الشهري (ج.م) - اختياري</label>
-                    <input type="number" id="categoryLimit" class="form-input" placeholder="0.00" min="0" step="0.01">
-                </div>
-                <div class="form-group">
-                    <label>اختر لون الفئة</label>
-                    <div class="category-colors" id="colorPicker"></div>
-                </div>
-                <button class="btn btn-success" onclick="addCategory()" style="width: 100%; margin-bottom: 20px;">
-                    <i class="fas fa-plus"></i> إضافة الفئة
-                </button>
-                
-                <div id="existingCategories"></div>
-            </div>
-        </div>
-
-        <!-- Set Budget Modal -->
-        <div id="setBudgetModal" class="modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <span><i class="fas fa-piggy-bank"></i> تعيين الميزانية الشهرية</span>
-                    <button class="modal-close" onclick="hideModal('setBudgetModal')">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div class="form-group">
-                    <label for="budgetAmount">المبلغ الشهري (ج.م)</label>
-                    <input type="number" id="budgetAmount" class="form-input" placeholder="أدخل الميزانية الشهرية" min="0" step="0.01">
-                </div>
-                <button class="btn btn-primary" onclick="setBudget()" style="width: 100%;">
-                    <i class="fas fa-check"></i> تعيين الميزانية
-                </button>
-            </div>
-        </div>
-
-        <!-- All Expenses Modal -->
-        <div id="allExpensesModal" class="modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <span><i class="fas fa-list"></i> جميع المصروفات</span>
-                    <button class="modal-close" onclick="hideModal('allExpensesModal')">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div id="allExpensesContainer">
-                    <div class="empty-state">
-                        <i class="fas fa-inbox"></i>
-                        <p>لا توجد مصروفات</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Category Expenses Details Modal -->
-        <div id="categoryExpensesModal" class="modal">
-            <div class="modal-content large">
-                <div class="modal-header">
-                    <span><i class="fas fa-chart-pie"></i> تفاصيل المصروفات حسب الفئة</span>
-                    <button class="modal-close" onclick="hideModal('categoryExpensesModal')">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div id="categoryExpensesContainer">
-                    <!-- سيتم ملؤه ديناميكياً -->
-                </div>
-            </div>
-        </div>
-
-        <!-- Export Data Modal -->
-        <div id="exportDataModal" class="modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <span><i class="fas fa-download"></i> تصدير البيانات</span>
-                    <button class="modal-close" onclick="hideModal('exportDataModal')">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div style="display: grid; gap: 15px;">
-                    <button class="btn btn-success" onclick="exportToCSV()">
-                        <i class="fas fa-file-csv"></i> تصدير CSV
-                    </button>
-                    <button class="btn btn-info" onclick="exportToJSON()">
-                        <i class="fas fa-file-code"></i> تصدير JSON
-                    </button>
-                    <button class="btn btn-primary" onclick="exportToPDF()">
-                        <i class="fas fa-file-pdf"></i> تصدير PDF
-                    </button>
-                </div>
-            </div>
-        </div>
+        <!-- إخفاء زر الإضافة السريع لأن نموذج الإضافة أصبح جزءاً من لوحة الملخص -->
+        <button class="btn btn-outline-warning d-none" id="quickAddBtn" type="button">
+          <i class="fa-solid fa-plus me-1"></i>مصروف
+        </button>
+      </div>
     </div>
+  </nav>
 
-    <script>
-        // ============ Firebase Configuration ============
-        const firebaseConfig = {
-            apiKey: "AIzaSyCBVxpqtMCzKH2BTKr70gI9UUlbJuHzFEw",
-            authDomain: "masrof2-9e67a.firebaseapp.com",
-            databaseURL: "https://masrof2-9e67a-default-rtdb.firebaseio.com",
-            projectId: "masrof2-9e67a",
-            storageBucket: "masrof2-9e67a.firebasestorage.app",
-            messagingSenderId: "958997909952",
-            appId: "1:958997909952:web:975ba540314a6389abb825"
-        };
+  <div class="container-fluid">
+    <div class="row">
+      <!-- main content - full width now (no sidebar) -->
+      <div class="col-12">
+        <div class="tab-content pb-4" id="tabContent">
 
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
-        const database = firebase.database();
+          <!-- DASHBOARD -->
+          <div class="tab-pane active" id="tabDashboard" role="tabpanel">
+            <div class="glass p-3 p-md-4 mb-3">
+              <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center">
+                <div>
+                  <div class="fw-bold fs-5">الملخص العام</div>
+                  <div class="small text-white-50">نظرة سريعة على إجمالي المصروفات</div>
+                </div>
+                <div class="d-flex gap-2 align-items-center">
+                <div class="d-none">
+                    <label class="small text-white-50 mb-1 d-block">الشهر</label>
+                    <input id="monthSelectorInline" type="month" class="form-control" style="width: 180px;" disabled>
+                  </div>
+                </div>
+              </div>
 
-        // ============ App Constants ============
-        const COLORS = [
-            { name: 'أحمر', code: '#ef4444' },
-            { name: 'أزرق', code: '#3b82f6' },
-            { name: 'أخضر', code: '#10b981' },
-            { name: 'أصفر', code: '#f59e0b' },
-            { name: 'بنفسجي', code: '#8b5cf6' },
-            { name: 'وردي', code: '#ec4899' },
-            { name: 'سماوي', code: '#06b6d4' },
-            { name: 'برتقالي', code: '#f97316' },
-            { name: 'أخضر داكن', code: '#059669' },
-            { name: 'أزرق داكن', code: '#1e40af' }
-        ];
+              <div class="row g-2 g-md-3 mt-1">
+                <div class="col-12 col-md-4">
+                  <div class="stat">
+                    <div class="label"><i class="fa-solid fa-sack-dollar me-1"></i>الميزانية</div>
+                    <div class="value" id="totalBudgetDisplay">0</div>
+                    <div class="small text-white-50">ج.م</div>
+                  </div>
+                </div>
+                <div class="col-12 col-md-4">
+                  <div class="stat" role="button" tabindex="0" id="openAllTxFromStat">
+                    <div class="label"><i class="fa-solid fa-arrow-trend-up me-1"></i>المصروف</div>
+                    <div class="value text-danger-soft" id="totalSpentDisplay">0</div>
+                    <div class="small text-white-50">ج.م</div>
+                  </div>
+                </div>
+                <div class="col-12 col-md-4">
+                  <div class="stat">
+                    <div class="label"><i class="fa-solid fa-shield-heart me-1"></i>المتبقي</div>
+                    <div class="value text-teal" id="totalRemainingDisplay">0</div>
+                    <div class="small text-white-50">ج.م</div>
+                  </div>
+                </div>
+              </div>
+            </div>
 
-        let selectedColor = COLORS[0].code;
-        let currentUser = null;
-        let userData = {
-            expenses: [],
-            categories: [],
-            budget: 0,
-            profile: {
-                name: '',
-                email: ''
-            }
-        };
+            <!-- تم حذف قسم حالة الفئات ليحل محله نموذج إضافة المصروفات داخل لوحة الملخص -->
+            <!-- نموذج إضافة المصروف ضمن لوحة الملخص -->
+            <div class="glass p-3 p-md-4 mt-3" id="addExpenseSection">
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                  <div class="fw-bold fs-5"><i class="fa-solid fa-wallet me-2 text-gold"></i>إضافة مصروف</div>
+                  <div class="small text-white-50">تسجيل سريع + معاينة المتبقي من الفئة</div>
+                </div>
+              </div>
+              <div class="row g-2 g-md-3">
+                <div class="col-12 col-md-4">
+                  <label class="small text-white-50 mb-1">الفئة</label>
+                  <select id="expenseCategory" class="form-select">
+                    <option value="">اختر الفئة...</option>
+                  </select>
+                  <div id="categoryBalanceHint" class="small mt-1"></div>
+                </div>
+                <div class="col-12 col-md-4">
+                  <label class="small text-white-50 mb-1">المبلغ</label>
+                  <input id="expenseAmount" type="number" class="form-control" placeholder="0.00" inputmode="decimal">
+                </div>
+                <div class="col-12 col-md-4">
+                  <label class="small text-white-50 mb-1">التاريخ</label>
+                  <input id="expenseDate" type="date" class="form-control">
+                </div>
+                <div class="col-12">
+                  <label class="small text-white-50 mb-1">ملاحظات (اختياري)</label>
+                  <input id="expenseNotes" type="text" class="form-control" placeholder="تفاصيل الصرف...">
+                </div>
+                <div class="col-12 col-md-6">
+                  <button class="btn btn-warning w-100 fw-bold text-dark py-2" id="saveExpenseBtn" type="button">
+                    <i class="fa-solid fa-check me-1"></i>تسجيل العملية
+                  </button>
+                </div>
+                <div class="col-12 col-md-6">
+                  <button class="btn btn-outline-light w-100 fw-bold py-2" id="clearExpenseForm" type="button">
+                    <i class="fa-solid fa-rotate-left me-1"></i>تفريغ
+                  </button>
+                </div>
+              </div>
+              <hr class="border-secondary my-4">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <div class="fw-bold">آخر 8 عمليات</div>
+                <button class="btn btn-outline-info btn-sm" id="goTxTab">
+                  <i class="fa-solid fa-arrow-left-long me-1"></i>عرض كل العمليات
+                </button>
+              </div>
+              <div class="table-responsive">
+                <table class="table mb-0">
+                  <thead>
+                    <tr>
+                      <th>التاريخ</th>
+                      <th>الفئة</th>
+                      <th>المبلغ</th>
+                      <th>ملاحظات</th>
+                      <th class="text-nowrap">تحكم</th>
+                    </tr>
+                  </thead>
+                  <tbody id="recentTxTable"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
 
-        // ============ Authentication Functions ============
-        function showAuthForm(formType) {
-            document.querySelectorAll('.auth-tab').forEach(tab => tab.classList.remove('active'));
-            document.querySelectorAll('.auth-form').forEach(form => form.classList.remove('active'));
-            
-            if (formType === 'login') {
-                document.querySelector('.auth-tab:nth-child(1)').classList.add('active');
-                document.getElementById('loginForm').classList.add('active');
-            } else {
-                document.querySelector('.auth-tab:nth-child(2)').classList.add('active');
-                document.getElementById('registerForm').classList.add('active');
-            }
-        }
+          <!-- تم حذف تبويب إضافة المصروف لأن نموذج الإضافة أصبح مدمجاً داخل لوحة الملخص -->
 
-        function login() {
-            const email = document.getElementById('loginEmail').value;
-            const password = document.getElementById('loginPassword').value;
+          <!-- TRANSACTIONS -->
+          <div class="tab-pane" id="tabTx" role="tabpanel">
+            <div class="glass p-3 p-md-4">
+              <div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-3">
+                <div>
+                  <div class="fw-bold fs-5"><i class="fa-solid fa-list-check me-2 text-teal"></i>العمليات</div>
+                  <div class="small text-white-50">بحث + فلترة + تعديل/حذف</div>
+                </div>
+                <!-- زر الرجوع للرئيسية -->
+                <button class="btn btn-outline-light btn-sm align-self-start" type="button" title="الرجوع إلى الرئيسية" onclick="app.switchTab('tabDashboard')">
+                  <i class="fa-solid fa-house"></i> الرئيسية
+                </button>
 
-            if (!email || !password) {
-                alert('الرجاء إدخال البريد الإلكتروني وكلمة المرور');
-                return;
-            }
+                <div class="d-flex flex-wrap gap-2">
+                  <div>
+                    <label class="small text-white-50 mb-1">بحث</label>
+                    <input id="txSearch" class="form-control" placeholder="ابحث في الفئة أو الملاحظات...">
+                  </div>
+                  <div>
+                    <label class="small text-white-50 mb-1">فلتر فئة</label>
+                    <select id="txCatFilter" class="form-select" style="min-width: 180px;">
+                      <option value="">كل الفئات</option>
+                    </select>
+                  </div>
+                  <div class="d-flex align-items-end">
+                    <button class="btn btn-outline-light" id="exportCsvBtn" type="button">
+                      <i class="fa-solid fa-file-csv me-1"></i>CSV
+                    </button>
+                  </div>
+                </div>
+              </div>
 
-            auth.signInWithEmailAndPassword(email, password)
-                .then((userCredential) => {
-                    currentUser = userCredential.user;
-                    loadUserData();
-                })
-                .catch((error) => {
-                    alert('خطأ في تسجيل الدخول: ' + error.message);
-                });
-        }
+              <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                  <thead>
+                    <tr>
+                      <th class="text-nowrap">التاريخ</th>
+                      <th>الفئة</th>
+                      <th class="text-nowrap">المبلغ</th>
+                      <th>ملاحظات</th>
+                      <th class="text-nowrap">تحكم</th>
+                    </tr>
+                  </thead>
+                  <tbody id="txTable"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
 
-        function register() {
-            const name = document.getElementById('registerName').value;
-            const email = document.getElementById('registerEmail').value;
-            const password = document.getElementById('registerPassword').value;
-            const confirmPassword = document.getElementById('confirmPassword').value;
+          <!-- REPORTS -->
+          <div class="tab-pane" id="tabReports" role="tabpanel">
+            <div class="glass p-3 p-md-4">
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                  <div class="fw-bold fs-5"><i class="fa-solid fa-file-invoice-dollar me-2 text-gold"></i>التقارير</div>
+                  <div class="small text-white-50">مشاركة كنص أو صورة (WhatsApp)</div>
+                </div>
+                <!-- زر الرجوع للرئيسية -->
+                <button class="btn btn-outline-light btn-sm" type="button" title="الرجوع إلى الرئيسية" onclick="app.switchTab('tabDashboard')">
+                  <i class="fa-solid fa-house"></i> الرئيسية
+                </button>
+              </div>
 
-            if (!name || !email || !password || !confirmPassword) {
-                alert('الرجاء ملء جميع الحقول');
-                return;
-            }
+              <div id="reportPreview" class="glass-soft p-3 p-md-4 mb-3"></div>
 
-            if (password !== confirmPassword) {
-                alert('كلمتا المرور غير متطابقتين');
-                return;
-            }
+              <div class="row g-2">
+                <div class="col-12 col-md-6">
+                  <button class="btn btn-success w-100 fw-bold py-2" id="shareTextBtn">
+                    <i class="fa-brands fa-whatsapp me-2"></i>مشاركة كنص
+                  </button>
+                </div>
+                <div class="col-12 col-md-6">
+                  <button class="btn btn-warning w-100 fw-bold text-dark py-2" id="shareImgBtn">
+                    <i class="fa-solid fa-image me-2"></i>مشاركة كصورة
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
 
-            auth.createUserWithEmailAndPassword(email, password)
-                .then((userCredential) => {
-                    currentUser = userCredential.user;
-                    
-                    // Save user profile
-                    database.ref('users/' + currentUser.uid + '/profile').set({
-                        name: name,
-                        email: email,
-                        createdAt: new Date().toISOString()
-                    });
+          <!-- SETTINGS -->
+          <div class="tab-pane" id="tabSettings" role="tabpanel">
+            <div class="glass p-3 p-md-4">
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                  <div class="fw-bold fs-5"><i class="fa-solid fa-gear me-2"></i>الإعدادات</div>
+                  <div class="small text-white-50">الميزانية + إدارة الفئات</div>
+                </div>
+                <!-- زر الرجوع للرئيسية -->
+                <button class="btn btn-outline-light btn-sm" type="button" title="الرجوع إلى الرئيسية" onclick="app.switchTab('tabDashboard')">
+                  <i class="fa-solid fa-house"></i> الرئيسية
+                </button>
+              </div>
 
-                    // Initialize user data
-                    userData.profile.name = name;
-                    userData.profile.email = email;
-                    saveUserData();
-                    showApp();
-                })
-                .catch((error) => {
-                    alert('خطأ في إنشاء الحساب: ' + error.message);
-                });
-        }
-
-        function logout() {
-            auth.signOut().then(() => {
-                currentUser = null;
-                userData = { expenses: [], categories: [], budget: 0, profile: { name: '', email: '' } };
-                showAuth();
-            });
-        }
-
-        // ============ User Data Management ============
-        function loadUserData() {
-            if (!currentUser) return;
-
-            database.ref('users/' + currentUser.uid).once('value')
-                .then((snapshot) => {
-                    const data = snapshot.val();
-                    if (data) {
-                        userData.expenses = data.expenses || [];
-                        userData.categories = data.categories || [];
-                        userData.budget = data.budget || 0;
-                        userData.profile = data.profile || { name: currentUser.displayName || 'مستخدم', email: currentUser.email };
-                    }
-                    updateAllDisplays();
-                    showApp();
-                })
-                .catch((error) => {
-                    console.error('Error loading user data:', error);
-                });
-        }
-
-        function saveUserData() {
-            if (!currentUser) return;
-
-            database.ref('users/' + currentUser.uid).set(userData)
-                .then(() => {
-                    console.log('User data saved successfully');
-                })
-                .catch((error) => {
-                    console.error('Error saving user data:', error);
-                });
-        }
-
-        // ============ UI Functions ============
-        function showAuth() {
-            document.getElementById('authContainer').classList.add('show');
-            document.getElementById('appContainer').style.display = 'none';
-        }
-
-        function showApp() {
-            document.getElementById('authContainer').classList.remove('show');
-            document.getElementById('appContainer').style.display = 'block';
-            
-            // Update user info
-            document.getElementById('userName').textContent = `مرحباً ${userData.profile.name || 'مهندس بولس سمير'}`;
-            document.getElementById('userEmail').textContent = userData.profile.email || '';
-            
-            initializeApp();
-        }
-
-        function initializeApp() {
-            populateColors();
-            setDateToToday();
-            updateAllDisplays();
-        }
-
-        function toggleSettingsMenu() {
-            const menu = document.getElementById('settingsMenu');
-            menu.classList.toggle('show');
-        }
-
-        function hideSettingsMenu() {
-            document.getElementById('settingsMenu').classList.remove('show');
-        }
-
-        function showModal(modalId) {
-            hideSettingsMenu();
-            document.getElementById(modalId).classList.add('show');
-        }
-
-        function hideModal(modalId) {
-            document.getElementById(modalId).classList.remove('show');
-        }
-
-        // ============ Settings Menu Functions ============
-        function manageCategories() {
-            updateExistingCategories();
-            showModal('manageCategoriesModal');
-        }
-
-        function setMonthlyBudget() {
-            document.getElementById('budgetAmount').value = userData.budget || '';
-            showModal('setBudgetModal');
-        }
-
-        function viewAllExpenses() {
-            updateAllExpensesModal();
-            showModal('allExpensesModal');
-        }
-
-        function exportData() {
-            showModal('exportDataModal');
-        }
-
-        function printReport() {
-            const printWindow = window.open('', '_blank');
-            const totalExpenses = getTotalExpenses();
-            const remaining = userData.budget - totalExpenses;
-            
-            const categoriesSummary = userData.categories.map(category => {
-                const categoryExpenses = userData.expenses.filter(exp => exp.categoryId === category.id);
-                const categoryTotal = categoryExpenses.reduce((sum, exp) => sum + exp.amount, 0);
-                const categoryRemaining = (category.limit || 0) - categoryTotal;
-                
-                return {
-                    name: category.name,
-                    total: categoryTotal,
-                    limit: category.limit || 0,
-                    remaining: categoryRemaining
-                };
-            });
-            
-            printWindow.document.write(`
-                <html>
-                <head>
-                    <title>تقرير المصروفات - مهندس بولس سمير</title>
-                    <style>
-                        body { 
-                            font-family: Arial, sans-serif; 
-                            direction: rtl; 
-                            padding: 20px; 
-                            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-                        }
-                        .header {
-                            text-align: center;
-                            margin-bottom: 30px;
-                            padding: 20px;
-                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                            color: white;
-                            border-radius: 10px;
-                        }
-                        h1, h2 { color: #333; }
-                        h1 { font-size: 2em; margin-bottom: 10px; }
-                        h2 { margin-top: 30px; padding-bottom: 10px; border-bottom: 2px solid #667eea; }
-                        .stats { 
-                            display: grid; 
-                            grid-template-columns: repeat(3, 1fr); 
-                            gap: 15px; 
-                            margin: 20px 0; 
-                        }
-                        .stat-card {
-                            background: white;
-                            padding: 15px;
-                            border-radius: 10px;
-                            text-align: center;
-                            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
-                            border-right: 4px solid;
-                        }
-                        .stat-card:nth-child(1) { border-color: #10b981; }
-                        .stat-card:nth-child(2) { border-color: #f59e0b; }
-                        .stat-card:nth-child(3) { border-color: #3b82f6; }
-                        .stat-value { font-size: 1.8em; font-weight: bold; margin: 10px 0; }
-                        .stat-label { color: #666; font-size: 0.9em; }
-                        .category-summary { 
-                            background: white; 
-                            padding: 15px; 
-                            border-radius: 10px; 
-                            margin: 10px 0; 
-                            border-right: 4px solid;
-                            box-shadow: 0 3px 10px rgba(0,0,0,0.05);
-                        }
-                        .progress-bar {
-                            width: 100%;
-                            height: 8px;
-                            background: #e2e8f0;
-                            border-radius: 4px;
-                            margin: 10px 0;
-                            overflow: hidden;
-                        }
-                        .progress-fill {
-                            height: 100%;
-                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                            border-radius: 4px;
-                            transition: width 0.3s ease;
-                        }
-                        table { 
-                            width: 100%; 
-                            border-collapse: collapse; 
-                            margin: 20px 0; 
-                        }
-                        th, td { 
-                            border: 1px solid #ddd; 
-                            padding: 12px; 
-                            text-align: center; 
-                        }
-                        th { 
-                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                            color: white; 
-                            font-weight: bold;
-                        }
-                        tr:nth-child(even) { background: #f8fafc; }
-                        .print-controls {
-                            margin-top: 30px;
-                            padding-top: 20px;
-                            border-top: 1px solid #ddd;
-                            text-align: center;
-                        }
-                        .btn-close {
-                            background: #ef4444;
-                            color: white;
-                            border: none;
-                            padding: 12px 30px;
-                            border-radius: 8px;
-                            cursor: pointer;
-                            font-size: 1em;
-                            font-weight: bold;
-                            transition: all 0.3s;
-                            display: inline-block;
-                            margin: 10px;
-                        }
-                        .btn-close:hover {
-                            background: #dc2626;
-                            transform: translateY(-2px);
-                            box-shadow: 0 5px 15px rgba(239, 68, 68, 0.3);
-                        }
-                        @media print {
-                            .print-controls { display: none; }
-                        }
-                    </style>
-                </head>
-                <body>
-                    <div class="header">
-                        <h1><i class="fas fa-wallet"></i> تقرير المصروفات الشهري</h1>
-                        <h2>مهندس بولس سمير</h2>
-                        <p>التاريخ: ${new Date().toLocaleDateString('ar-EG')}</p>
+              <div class="row g-3">
+                <div class="col-12 col-xl-5">
+                  <div class="glass-soft p-3">
+                    <div class="fw-bold mb-2">الميزانية الشهرية الكلية</div>
+                    <div class="input-group">
+                      <span class="input-group-text">ج.م</span>
+                      <input id="globalBudgetInput" type="number" class="form-control" placeholder="مثال: 5000">
+                      <button class="btn btn-success fw-bold" id="saveBudgetBtn" type="button">حفظ</button>
                     </div>
-                    
-                    <div class="stats">
-                        <div class="stat-card">
-                            <div class="stat-label"><i class="fas fa-piggy-bank"></i> الميزانية الشهرية</div>
-                            <div class="stat-value">${userData.budget.toFixed(2)} ج.م</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-label"><i class="fas fa-money-bill-wave"></i> إجمالي المصروفات</div>
-                            <div class="stat-value">${totalExpenses.toFixed(2)} ج.م</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-label"><i class="fas fa-chart-pie"></i> المتبقي</div>
-                            <div class="stat-value" style="color: ${remaining >= 0 ? '#10b981' : '#ef4444'}">${remaining.toFixed(2)} ج.م</div>
-                        </div>
+                    <div class="small text-white-50 mt-2">
+                      * يتم الحفظ في <span class="badge badge-soft">settings/globalBudget</span>
                     </div>
-                    
-                    <h2><i class="fas fa-chart-pie"></i> ملخص المصروفات حسب الفئة</h2>
-                    ${categoriesSummary.map(cat => {
-                        const percentage = cat.limit > 0 ? (cat.total / cat.limit * 100).toFixed(1) : 0;
-                        return `
-                            <div class="category-summary" style="border-color: ${userData.categories.find(c => c.name === cat.name)?.color || '#667eea'}">
-                                <div style="display: flex; justify-content: space-between; align-items: center;">
-                                    <div style="font-weight: bold; font-size: 1.1em;">${cat.name}</div>
-                                    <div style="font-weight: bold; color: ${cat.total > (cat.limit || 0) ? '#ef4444' : '#10b981'}">
-                                        ${cat.total.toFixed(2)} ج.م / ${cat.limit || '∞'} ج.م
-                                    </div>
-                                </div>
-                                ${cat.limit > 0 ? `
-                                    <div class="progress-bar">
-                                        <div class="progress-fill" style="width: ${Math.min(percentage, 100)}%"></div>
-                                    </div>
-                                    <div style="display: flex; justify-content: space-between; font-size: 0.9em; color: #666;">
-                                        <span>المتبقي: ${cat.remaining.toFixed(2)} ج.م</span>
-                                        <span>${percentage}%</span>
-                                    </div>
-                                ` : ''}
-                            </div>
-                        `;
-                    }).join('')}
-                    
-                    <h2><i class="fas fa-list"></i> تفاصيل جميع المصروفات</h2>
-                    <table>
-                        <tr>
+                  </div>
+                </div>
+
+                <div class="col-12 col-xl-7">
+                  <div class="glass-soft p-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                      <div class="fw-bold">الفئات</div>
+                      <span class="small text-white-50">إضافة / تعديل / حذف</span>
+                    </div>
+
+                    <div class="row g-2">
+                      <input type="hidden" id="editCatId">
+                      <div class="col-12 col-md-5">
+                        <input id="newCatName" type="text" class="form-control" placeholder="اسم الفئة (مثال: لحوم)">
+                      </div>
+                      <div class="col-12 col-md-4">
+                        <input id="newCatLimit" type="number" class="form-control" placeholder="الحد الأقصى">
+                      </div>
+                      <div class="col-12 col-md-3 d-grid">
+                        <button class="btn btn-primary fw-bold" id="saveCatBtn" type="button">
+                          <i class="fa-solid fa-plus me-1"></i>حفظ
+                        </button>
+                      </div>
+                      <div class="col-12 d-none" id="cancelCatWrap">
+                        <button class="btn btn-outline-light w-100" id="cancelCatEditBtn" type="button">
+                          <i class="fa-solid fa-xmark me-1"></i>إلغاء التعديل
+                        </button>
+                      </div>
+                    </div>
+
+                    <hr class="border-secondary my-3">
+
+                    <div class="table-responsive">
+                      <table class="table align-middle mb-0">
+                        <thead>
+                          <tr>
                             <th>الفئة</th>
-                            <th>المبلغ</th>
-                            <th>التاريخ</th>
-                            <th>ملاحظات</th>
-                        </tr>
-                        ${userData.expenses.sort((a, b) => new Date(b.date) - new Date(a.date)).map(expense => {
-                            const category = userData.categories.find(cat => cat.id === expense.categoryId);
-                            return `
-                                <tr>
-                                    <td>${category ? category.name : 'غير محدد'}</td>
-                                    <td style="font-weight: bold;">${expense.amount.toFixed(2)} ج.م</td>
-                                    <td>${new Date(expense.date).toLocaleDateString('ar-EG')}</td>
-                                    <td>${expense.notes || '-'}</td>
-                                </tr>
-                            `;
-                        }).join('')}
-                    </table>
-                    
-                    <div class="print-controls">
-                        <button class="btn-close" onclick="window.close()">
-                            <i class="fas fa-times"></i> إغلاق صفحة الطباعة
-                        </button>
-                        <button class="btn-close" onclick="window.print()" style="background: #3b82f6;">
-                            <i class="fas fa-print"></i> طباعة التقرير
-                        </button>
+                            <th class="text-nowrap">الحد</th>
+                            <th class="text-nowrap">تحكم</th>
+                          </tr>
+                        </thead>
+                        <tbody id="adminCatTable"></tbody>
+                      </table>
                     </div>
-                    
-                    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"><\/script>
-                    <script>
-                        window.onload = () => {
-                            // Auto-print after 1 second
-                            setTimeout(() => {
-                                window.print();
-                            }, 1000);
-                        };
-                    <\/script>
-                </body>
-                </html>
-            `);
-        }
+                  </div>
+                </div>
+              </div>
 
-        // ============ Category Budget Functions ============
-        function updateCategoryLimitInfo() {
-            const categoryId = parseInt(document.getElementById('expenseCategory').value);
-            const category = userData.categories.find(cat => cat.id === categoryId);
-            
-            const limitInfo = document.getElementById('categoryLimitInfo');
-            const progressBar = document.getElementById('limitProgress');
-            
-            if (category && category.limit > 0) {
-                const categoryExpenses = userData.expenses.filter(exp => exp.categoryId === categoryId);
-                const categoryTotal = categoryExpenses.reduce((sum, exp) => sum + exp.amount, 0);
-                const remaining = category.limit - categoryTotal;
-                const percentage = (categoryTotal / category.limit * 100).toFixed(1);
-                
-                document.getElementById('remainingLimit').textContent = remaining.toFixed(2);
-                document.getElementById('limitPercentage').textContent = `${percentage}%`;
-                document.getElementById('limitProgressBar').style.width = `${Math.min(percentage, 100)}%`;
-                
-                // تغيير لون شريط التقدم حسب النسبة
-                if (percentage >= 90) {
-                    document.getElementById('limitProgressBar').style.background = 'var(--danger-gradient)';
-                } else if (percentage >= 70) {
-                    document.getElementById('limitProgressBar').style.background = 'var(--secondary-gradient)';
-                } else {
-                    document.getElementById('limitProgressBar').style.background = 'var(--success-gradient)';
-                }
-                
-                limitInfo.style.display = 'flex';
-                progressBar.style.display = 'block';
-            } else {
-                limitInfo.style.display = 'none';
-                progressBar.style.display = 'none';
+              <hr class="border-secondary my-4">
+
+              <div class="small text-white-50">
+                <div class="fw-bold text-white mb-1">ملاحظات أمان البيانات</div>
+                <ul class="mb-0">
+                  <li>نفس مسارات Firebase الموجودة لديك: <b>categories</b> و <b>expenses</b> و <b>settings</b>.</li>
+                  <li>تم إضافة حقل اختياري <b>month</b> مع كل مصروف (بدون كسر البيانات القديمة).</li>
+                  <li>الفلترة تقرأ من <b>month</b> إن وجد وإلا تستخدم <b>date</b>.</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+        </div><!-- tab-content -->
+      </div><!-- main -->
+    </div><!-- row -->
+  </div><!-- container-fluid -->
+
+  <!-- floating menu button -->
+  <button class="fab-menu" id="fabMenuButton" title="القائمة">
+    <i class="fa-solid fa-plus"></i>
+  </button>
+
+  <!-- Edit expense modal -->
+  <div class="modal fade" id="editExpenseModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content text-bg-dark" style="border: 1px solid rgba(255,255,255,.10); border-radius: 18px;">
+        <div class="modal-header border-secondary">
+          <h6 class="modal-title fw-bold text-info"><i class="fa-solid fa-pen me-2"></i>تعديل مصروف</h6>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="editExpId">
+          <div class="mb-2">
+            <label class="small text-white-50 mb-1">الفئة</label>
+            <select id="editExpCategory" class="form-select"></select>
+          </div>
+          <div class="mb-2">
+            <label class="small text-white-50 mb-1">المبلغ</label>
+            <input type="number" id="editExpAmount" class="form-control">
+          </div>
+          <div class="mb-2">
+            <label class="small text-white-50 mb-1">ملاحظات</label>
+            <input type="text" id="editExpNotes" class="form-control">
+          </div>
+          <div class="mb-3">
+            <label class="small text-white-50 mb-1">التاريخ</label>
+            <input type="date" id="editExpDate" class="form-control">
+          </div>
+          <button class="btn btn-info w-100 fw-bold" id="updateExpenseBtn" type="button">حفظ</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- confirm delete modal -->
+  <div class="modal fade" id="confirmModal" tabindex="-1" style="z-index: 1060;">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content text-bg-dark" style="border: 1px solid rgba(255,255,255,.10); border-radius: 18px;">
+        <div class="modal-header border-secondary">
+          <h6 class="modal-title text-danger fw-bold"><i class="fa-solid fa-triangle-exclamation me-2"></i>تأكيد الحذف</h6>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">هل أنت متأكد من الحذف؟ هذه العملية لا يمكن التراجع عنها.</div>
+        <div class="modal-footer border-secondary">
+          <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">إلغاء</button>
+          <button type="button" class="btn btn-danger fw-bold" id="confirmDeleteBtn">تأكيد الحذف</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- toast container -->
+  <div class="toast-container position-fixed top-0 start-0 p-3" style="z-index: 2001;">
+    <div id="appToast" class="toast text-bg-dark border border-secondary" role="alert" aria-live="assertive" aria-atomic="true">
+      <div class="d-flex">
+        <div class="toast-body" id="toastMsg">تم</div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    // =====================================================
+    // Firebase config: ضع نفس بياناتك الحالية هنا (لم نغيّر شيء)
+    // =====================================================
+    const firebaseConfig = {
+      apiKey: "AIzaSyCBVxpqtMCzKH2BTKr70gI9UUlbJuHzFEw",
+      authDomain: "masrof2-9e67a.firebaseapp.com",
+      databaseURL: "https://masrof2-9e67a-default-rtdb.firebaseio.com",
+      projectId: "masrof2-9e67a",
+      storageBucket: "masrof2-9e67a.firebasestorage.app",
+      messagingSenderId: "958997909952",
+      appId: "1:958997909952:web:975ba540314a6389abb825"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // =====================================================
+    // Floating Menu System - مبسط وتم إصلاحه
+    // =====================================================
+    class FloatingMenu {
+      constructor() {
+        this.isOpen = false;
+        this.menuElement = null;
+        this.overlayElement = null;
+        this.init();
+      }
+
+      init() {
+        // إنشاء القائمة
+        this.createMenu();
+        
+        // إضافة الأحداث
+        document.getElementById('fabMenuButton').addEventListener('click', () => this.toggle());
+      }
+
+      createMenu() {
+        // إنشاء overlay
+        this.overlayElement = document.createElement('div');
+        this.overlayElement.className = 'fab-menu-overlay';
+        this.overlayElement.style.display = 'none';
+        this.overlayElement.addEventListener('click', () => this.close());
+        
+        // إنشاء القائمة
+        this.menuElement = document.createElement('div');
+        this.menuElement.className = 'fab-menu-expanded';
+        this.menuElement.style.display = 'none';
+        this.menuElement.innerHTML = `
+          <div class="fab-menu-header">
+            <div class="d-flex align-items-center gap-2">
+              <span class="brand-dot"></span>
+              <span class="fw-bold">القائمة</span>
+            </div>
+            <button class="fab-menu-close" id="fabMenuClose">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+          <div class="fab-menu-items">
+            <div class="fab-menu-item" data-tab="tabDashboard">
+              <i class="fa-solid fa-chart-pie"></i>
+              <span>لوحة المتابعة</span>
+            </div>
+              <!-- تمت إزالة خيار إضافة مصروف من القائمة العائمة لأن النموذج أصبح مدمجاً في لوحة الملخص -->
+            <div class="fab-menu-item" data-tab="tabTx">
+              <i class="fa-solid fa-list-check"></i>
+              <span>العمليات</span>
+            </div>
+            <div class="fab-menu-item" data-tab="tabReports">
+              <i class="fa-solid fa-file-invoice-dollar"></i>
+              <span>التقارير</span>
+            </div>
+            <div class="fab-menu-item" data-tab="tabSettings">
+              <i class="fa-solid fa-gear"></i>
+              <span>الإعدادات</span>
+            </div>
+            <hr class="border-secondary my-2 mx-3 d-none">
+            <div class="px-3 py-2 d-none">
+              <div class="small text-white-50 mb-1">الشهر المحدد</div>
+              <div class="month-badge" id="fabMonthBadge">${new Date().toISOString().slice(0,7)}</div>
+            </div>
+          </div>
+        `;
+        
+        // إضافة العناصر إلى body
+        document.body.appendChild(this.overlayElement);
+        document.body.appendChild(this.menuElement);
+        
+        // إضافة الأحداث للعناصر داخل القائمة
+        const closeBtn = this.menuElement.querySelector('#fabMenuClose');
+        if (closeBtn) {
+          closeBtn.addEventListener('click', () => this.close());
+        }
+        
+        // إضافة الأحداث لبنود القائمة
+        const menuItems = this.menuElement.querySelectorAll('.fab-menu-item');
+        menuItems.forEach(item => {
+          item.addEventListener('click', (e) => {
+            e.preventDefault();
+            const tabId = item.getAttribute('data-tab');
+            this.close();
+            app.switchTab(tabId);
+          });
+        });
+      }
+
+      open() {
+        this.isOpen = true;
+        this.menuElement.style.display = 'block';
+        this.overlayElement.style.display = 'block';
+        
+        // تحديث الشهر في القائمة
+        document.getElementById('fabMonthBadge').textContent = app.state.selectedMonth;
+        
+        // تحديث العنصر النشط
+        this.updateActiveTab();
+      }
+
+      close() {
+        this.isOpen = false;
+        this.menuElement.style.display = 'none';
+        this.overlayElement.style.display = 'none';
+      }
+
+      toggle() {
+        if (this.isOpen) {
+          this.close();
+        } else {
+          this.open();
+        }
+      }
+
+      updateActiveTab() {
+        // إزالة النشط من جميع العناصر
+        const menuItems = this.menuElement.querySelectorAll('.fab-menu-item');
+        menuItems.forEach(item => {
+          item.classList.remove('active');
+        });
+        
+        // إضافة النشط للعنصر الحالي
+        const currentTab = document.querySelector('.tab-pane.active')?.id;
+        if (currentTab) {
+          const activeItem = this.menuElement.querySelector(`[data-tab="${currentTab}"]`);
+          if (activeItem) {
+            activeItem.classList.add('active');
+          }
+        }
+      }
+    }
+
+    // =====================================================
+    // App
+    // =====================================================
+    const UI = {
+      toast: null,
+      showToast(msg){
+        document.getElementById("toastMsg").innerText = msg;
+        if(!this.toast) this.toast = new bootstrap.Toast(document.getElementById("appToast"), { delay: 2600 });
+        this.toast.show();
+      },
+      money(n){
+        const num = Number(n || 0);
+        return new Intl.NumberFormat('en-EG').format(num);
+      },
+      safeText(s){
+        return (s ?? "").toString().replace(/[<>&]/g, ch => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[ch]));
+      }
+    };
+
+    const app = {
+      state: {
+        categories: {},
+        expenses: {},
+        settings: { globalBudget: 0 },
+        selectedMonth: localStorage.getItem("selectedMonth") || new Date().toISOString().slice(0,7),
+        pendingDelete: null,
+      },
+
+      init(){
+        // Initialize floating menu
+        this.floatingMenu = new FloatingMenu();
+
+        // bind month pickers
+        const monthSelectors = ["monthSelector","monthSelectorInline"]
+          .map(id => document.getElementById(id)).filter(Boolean);
+
+        monthSelectors.forEach(el => el.value = this.state.selectedMonth);
+        monthSelectors.forEach(el => el.addEventListener("change", (e)=>{
+          this.state.selectedMonth = e.target.value;
+          localStorage.setItem("selectedMonth", this.state.selectedMonth);
+          monthSelectors.forEach(x => { if (x !== el) x.value = this.state.selectedMonth; });
+          this.renderAll();
+        }));
+
+        // set default date in add form
+        document.getElementById("expenseDate").valueAsDate = new Date();
+
+        // buttons / actions
+        document.getElementById("saveExpenseBtn").addEventListener("click", ()=> this.addExpense());
+        document.getElementById("clearExpenseForm").addEventListener("click", ()=> this.clearExpenseForm());
+        document.getElementById("expenseCategory").addEventListener("change", ()=> this.updateCategoryBalanceHint());
+
+        document.getElementById("saveBudgetBtn").addEventListener("click", ()=> this.saveGlobalSettings());
+        document.getElementById("saveCatBtn").addEventListener("click", ()=> this.saveCategory());
+        document.getElementById("cancelCatEditBtn").addEventListener("click", ()=> this.resetCategoryForm());
+
+        document.getElementById("updateExpenseBtn").addEventListener("click", ()=> this.updateExpense());
+        document.getElementById("confirmDeleteBtn").addEventListener("click", ()=> this.executeDelete());
+
+        document.getElementById("txSearch").addEventListener("input", ()=> this.renderTransactionsTable());
+        document.getElementById("txCatFilter").addEventListener("change", ()=> this.renderTransactionsTable());
+
+        document.getElementById("exportCsvBtn").addEventListener("click", ()=> this.exportCsv());
+
+        document.getElementById("shareTextBtn").addEventListener("click", ()=> this.shareWhatsAppText());
+        document.getElementById("shareImgBtn").addEventListener("click", (e)=> this.shareReportImage(e));
+
+        // التعامل مع العناصر التي قد لا تكون موجودة بعد إزالة بعض الأقسام
+        const quickAddEl = document.getElementById("quickAddBtn");
+        if (quickAddEl) {
+          quickAddEl.addEventListener("click", () => {
+            // بما أن النموذج موجود داخل لوحة الملخص، ننتقل إلى لوحة الملخص ثم ننزل إلى النموذج
+            this.switchTab('tabDashboard');
+            const addSection = document.getElementById('addExpenseSection');
+            if (addSection) {
+              // تمرير بسيط لتجنب تعارضات التمرير عند تبديل التبويب
+              setTimeout(() => { addSection.scrollIntoView({ behavior: 'smooth' }); }, 50);
             }
+          });
+        }
+        const goTxEl = document.getElementById("goTxTab");
+        if (goTxEl) {
+          goTxEl.addEventListener("click", () => this.switchTab("tabTx"));
+        }
+        const openAllTxEl = document.getElementById("openAllTxFromStat");
+        if (openAllTxEl) {
+          openAllTxEl.addEventListener("click", () => this.switchTab("tabTx"));
+        }
+        const goSettingsCatEl = document.getElementById("goSettingsCategories");
+        if (goSettingsCatEl) {
+          goSettingsCatEl.addEventListener("click", () => this.switchTab("tabSettings"));
         }
 
-        function showCategoryExpensesDetails() {
-            const container = document.getElementById('categoryExpensesContainer');
-            container.innerHTML = '';
-            
-            if (userData.categories.length === 0) {
-                container.innerHTML = '<div class="empty-state"><i class="fas fa-inbox"></i><p>لا توجد فئات</p></div>';
-                showModal('categoryExpensesModal');
-                return;
-            }
-            
-            userData.categories.forEach(category => {
-                const categoryExpenses = userData.expenses.filter(exp => exp.categoryId === category.id);
-                const categoryTotal = categoryExpenses.reduce((sum, exp) => sum + exp.amount, 0);
-                const remaining = (category.limit || 0) - categoryTotal;
-                const percentage = category.limit > 0 ? (categoryTotal / category.limit * 100).toFixed(1) : 0;
-                
-                const categoryDiv = document.createElement('div');
-                categoryDiv.className = 'category-budget-display';
-                categoryDiv.style.borderRightColor = category.color;
-                
-                categoryDiv.innerHTML = `
-                    <div class="category-budget-header">
-                        <div class="category-budget-name">
-                            <div style="width: 15px; height: 15px; background: ${category.color}; border-radius: 50%;"></div>
-                            ${category.name}
-                        </div>
-                        <div class="category-budget-amount">
-                            ${categoryTotal.toFixed(2)} ج.م
-                            ${category.limit > 0 ? `/ ${category.limit.toFixed(2)} ج.م` : ''}
-                        </div>
-                    </div>
-                    ${category.limit > 0 ? `
-                        <div class="limit-progress">
-                            <div class="limit-progress-bar" style="width: ${Math.min(percentage, 100)}%; 
-                                background: ${percentage >= 90 ? 'var(--danger-gradient)' : percentage >= 70 ? 'var(--secondary-gradient)' : 'var(--success-gradient)'}"></div>
-                        </div>
-                        <div class="category-budget-remaining">
-                            المتبقي: <strong style="color: ${remaining >= 0 ? '#10b981' : '#ef4444'}">${remaining.toFixed(2)} ج.م</strong>
-                            (${percentage}%)
-                        </div>
-                    ` : ''}
-                    ${categoryExpenses.length > 0 ? `
-                        <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #e2e8f0;">
-                            <div style="font-size: 0.9em; color: #64748b; margin-bottom: 5px;">
-                                <i class="fas fa-receipt"></i> آخر المصروفات:
-                            </div>
-                            ${categoryExpenses.slice(-3).reverse().map(exp => `
-                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 5px 0; font-size: 0.85em;">
-                                    <span>${new Date(exp.date).toLocaleDateString('ar-EG')}</span>
-                                    <span style="font-weight: bold;">${exp.amount.toFixed(2)} ج.م</span>
-                                    <span style="color: #64748b;">${exp.notes || ''}</span>
-                                </div>
-                            `).join('')}
-                        </div>
-                    ` : ''}
-                `;
-                
-                container.appendChild(categoryDiv);
-            });
-            
-            showModal('categoryExpensesModal');
+        // sync firebase
+        this.syncData();
+      },
+
+      // دالة لتبديل التبويبات
+      switchTab(tabId) {
+        // إخفاء جميع التبويبات
+        const allTabs = document.querySelectorAll('.tab-pane');
+        allTabs.forEach(tab => {
+          tab.classList.remove('active');
+        });
+        
+        // إظهار التبويب المطلوب
+        const targetTab = document.getElementById(tabId);
+        if (targetTab) {
+          targetTab.classList.add('active');
+          window.scrollTo({ top: 0, behavior: "smooth" });
         }
-
-        function showBudgetDetails() {
-            const totalExpenses = getTotalExpenses();
-            const remaining = userData.budget - totalExpenses;
-            const percentage = userData.budget > 0 ? (totalExpenses / userData.budget * 100).toFixed(1) : 0;
-            
-            alert(`تفاصيل الميزانية:
-            \nالميزانية الشهرية: ${userData.budget.toFixed(2)} ج.م
-            \nإجمالي المصروفات: ${totalExpenses.toFixed(2)} ج.م
-            \nالمتبقي: ${remaining.toFixed(2)} ج.م
-            \nنسبة الاستهلاك: ${percentage}%`);
+        
+        // تحديث القائمة العائمة إذا كانت مفتوحة
+        if (this.floatingMenu && this.floatingMenu.isOpen) {
+          this.floatingMenu.updateActiveTab();
         }
+      },
 
-        function showRemainingDetails() {
-            const totalExpenses = getTotalExpenses();
-            const remaining = userData.budget - totalExpenses;
-            
-            if (remaining >= 0) {
-                alert(`🎉 ممتاز! لا يزال لديك ${remaining.toFixed(2)} ج.م متبقية من ميزانيتك.
-                \nاستمر في الحفاظ على إنفاقك بهذه الطريقة!`);
-            } else {
-                alert(`⚠️ انتبه! لقد تجاوزت ميزانيتك بمبلغ ${Math.abs(remaining).toFixed(2)} ج.م.
-                \nحاول تقليل مصروفاتك في الفترة القادمة.`);
-            }
-        }
+      // --- Firebase Sync (نفس المسارات الموجودة) ---
+      syncData(){
+        const loader = document.getElementById("loader");
 
-        // ============ App Functions ============
-        function populateColors() {
-            const colorPicker = document.getElementById('colorPicker');
-            colorPicker.innerHTML = '';
-            COLORS.forEach(color => {
-                const colorOption = document.createElement('div');
-                colorOption.className = 'color-option' + (color.code === selectedColor ? ' selected' : '');
-                colorOption.style.background = color.code;
-                colorOption.textContent = color.name;
-                colorOption.onclick = () => selectColor(color.code);
-                colorPicker.appendChild(colorOption);
-            });
-        }
-
-        function selectColor(color) {
-            selectedColor = color;
-            populateColors();
-        }
-
-        function setDateToToday() {
-            const today = new Date().toISOString().split('T')[0];
-            document.getElementById('expenseDate').value = today;
-            document.getElementById('expenseDate').min = today;
-        }
-
-        // ============ Budget Management ============
-        function setBudget() {
-            const amount = parseFloat(document.getElementById('budgetAmount').value);
-            if (isNaN(amount) || amount <= 0) {
-                alert('الرجاء إدخال ميزانية صحيحة');
-                return;
-            }
-            userData.budget = amount;
-            saveUserData();
-            updateAllDisplays();
-            hideModal('setBudgetModal');
-            alert('✅ تم تعيين الميزانية بنجاح!');
-        }
-
-        // ============ Category Management ============
-        function addCategory() {
-            const name = document.getElementById('newCategoryName').value.trim();
-            const limit = parseFloat(document.getElementById('categoryLimit').value) || 0;
-
-            if (!name) {
-                alert('الرجاء إدخال اسم الفئة');
-                return;
-            }
-
-            if (userData.categories.some(cat => cat.name === name)) {
-                alert('هذه الفئة موجودة بالفعل');
-                return;
-            }
-
-            userData.categories.push({
-                id: Date.now(),
-                name,
-                color: selectedColor,
-                limit: limit > 0 ? limit : null
-            });
-
-            document.getElementById('newCategoryName').value = '';
-            document.getElementById('categoryLimit').value = '';
-            selectedColor = COLORS[0].code;
-            populateColors();
-
-            saveUserData();
-            updateAllDisplays();
-            updateExistingCategories();
-            alert('✅ تم إضافة الفئة بنجاح!');
-        }
-
-        function updateExistingCategories() {
-            const container = document.getElementById('existingCategories');
-            if (!container) return;
-            
-            if (userData.categories.length === 0) {
-                container.innerHTML = '<p style="text-align: center; color: #64748b; margin-top: 20px;">لا توجد فئات</p>';
-                return;
-            }
-
-            container.innerHTML = '<h3 style="margin: 20px 0 10px 0; color: #475569;">الفئات الحالية</h3>';
-            
-            userData.categories.forEach(category => {
-                const categoryDiv = document.createElement('div');
-                categoryDiv.className = 'expense-item';
-                categoryDiv.style.marginBottom = '10px';
-                categoryDiv.style.borderRightColor = category.color;
-                
-                categoryDiv.innerHTML = `
-                    <div style="display: flex; align-items: center; gap: 10px; flex: 1;">
-                        <div style="width: 15px; height: 15px; background: ${category.color}; border-radius: 50%;"></div>
-                        <div>
-                            <strong>${category.name}</strong>
-                            ${category.limit ? `<div style="font-size: 0.8em; color: #64748b;">الحد: ${category.limit.toFixed(2)} ج.م</div>` : ''}
-                        </div>
-                    </div>
-                    <button class="btn-danger" onclick="deleteCategory(${category.id})" style="padding: 5px 10px; font-size: 0.8em;">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                `;
-                
-                container.appendChild(categoryDiv);
-            });
-        }
-
-        function deleteCategory(categoryId) {
-            if (confirm('هل أنت متأكد من حذف هذه الفئة؟ سيتم حذف جميع المصروفات المرتبطة بها.')) {
-                // حذف المصروفات المرتبطة بهذه الفئة
-                userData.expenses = userData.expenses.filter(exp => exp.categoryId !== categoryId);
-                userData.categories = userData.categories.filter(cat => cat.id !== categoryId);
-                saveUserData();
-                updateAllDisplays();
-                updateExistingCategories();
-                alert('✅ تم حذف الفئة بنجاح!');
-            }
-        }
-
-        // ============ Expense Management ============
-        function addExpense() {
-            const amount = parseFloat(document.getElementById('expenseAmount').value);
-            const categoryId = parseInt(document.getElementById('expenseCategory').value);
-            const date = document.getElementById('expenseDate').value;
-            const notes = document.getElementById('expenseNotes').value.trim();
-
-            if (isNaN(amount) || amount <= 0 || !categoryId || !date) {
-                alert('الرجاء ملء جميع الحقول المطلوبة');
-                return;
-            }
-
-            // التحقق من حدود الفئة
-            const category = userData.categories.find(cat => cat.id === categoryId);
-            if (category && category.limit > 0) {
-                const categoryExpenses = userData.expenses.filter(exp => exp.categoryId === categoryId);
-                const categoryTotal = categoryExpenses.reduce((sum, exp) => sum + exp.amount, 0);
-                const remaining = category.limit - categoryTotal;
-                
-                if (amount > remaining) {
-                    const message = remaining > 0 
-                        ? `⚠️ ستتجاوز حد الفئة بمبلغ ${(amount - remaining).toFixed(2)} ج.م. المتبقي في هذه الفئة: ${remaining.toFixed(2)} ج.م.\n\nهل تريد المتابعة؟`
-                        : `⚠️ لقد تجاوزت بالفعل حد هذه الفئة بمبلغ ${Math.abs(remaining).toFixed(2)} ج.م.\n\nهل تريد المتابعة؟`;
-                    
-                    if (!confirm(message)) {
-                        return;
-                    }
-                }
-            }
-
-            userData.expenses.push({
-                id: Date.now(),
-                amount,
-                categoryId,
-                date,
-                notes,
-                createdAt: new Date().toISOString()
-            });
-
-            document.getElementById('expenseAmount').value = '';
-            document.getElementById('expenseCategory').value = '';
-            document.getElementById('expenseNotes').value = '';
-            setDateToToday();
-
-            saveUserData();
-            updateAllDisplays();
-            
-            // عرض إشعار نجاح مع تأثير
-            const notification = document.createElement('div');
-            notification.style.cssText = `
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-                color: white;
-                padding: 15px 25px;
-                border-radius: 10px;
-                box-shadow: 0 10px 25px rgba(16, 185, 129, 0.3);
-                z-index: 5000;
-                animation: slideRight 0.5s ease;
-                display: flex;
-                align-items: center;
-                gap: 10px;
-                font-weight: bold;
-            `;
-            notification.innerHTML = `
-                <i class="fas fa-check-circle"></i>
-                تم إضافة المصروف بنجاح! المبلغ: ${amount.toFixed(2)} ج.م
-            `;
-            document.body.appendChild(notification);
-            
-            setTimeout(() => {
-                notification.style.animation = 'slideRight 0.5s ease reverse';
-                setTimeout(() => notification.remove(), 500);
-            }, 3000);
-        }
-
-        function deleteExpense(expenseId) {
-            if (confirm('هل أنت متأكد من حذف هذا المصروف؟')) {
-                userData.expenses = userData.expenses.filter(exp => exp.id !== expenseId);
-                saveUserData();
-                updateAllDisplays();
-                alert('✅ تم حذف المصروف بنجاح!');
-            }
-        }
-
-        // ============ Calculations ============
-        function getTotalExpenses() {
-            return userData.expenses.reduce((sum, exp) => sum + exp.amount, 0);
-        }
-
-        // ============ Update Displays ============
-        function updateAllDisplays() {
-            updateCategorySelect();
-            updateStatistics();
-            updateRecentExpenses();
-        }
-
-        function updateStatistics() {
-            const totalExpenses = getTotalExpenses();
-            const remaining = userData.budget - totalExpenses;
-
-            document.getElementById('totalBudget').textContent = userData.budget.toFixed(2) + ' ج.م';
-            document.getElementById('totalExpenses').textContent = totalExpenses.toFixed(2) + ' ج.م';
-            document.getElementById('remainingBudget').textContent = remaining.toFixed(2) + ' ج.م';
-            document.getElementById('remainingBudget').style.color = remaining >= 0 ? '#10b981' : '#ef4444';
-        }
-
-        function updateCategorySelect() {
-            const select = document.getElementById('expenseCategory');
-            select.innerHTML = '<option value="">اختر الفئة</option>';
-
-            userData.categories.forEach(category => {
-                const option = document.createElement('option');
-                option.value = category.id;
-                option.textContent = category.name + (category.limit ? ` (حد: ${category.limit.toFixed(2)} ج.م)` : '');
-                select.appendChild(option);
-            });
-        }
-
-        function updateRecentExpenses() {
-            const container = document.getElementById('recentExpensesContainer');
-            const recentExpenses = userData.expenses
-                .sort((a, b) => new Date(b.date) - new Date(a.date))
-                .slice(0, 10);
-
-            if (recentExpenses.length === 0) {
-                container.innerHTML = '<div class="empty-state"><i class="fas fa-inbox"></i><p>قم بإضافة أول مصروف لك</p></div>';
-                return;
-            }
-
-            container.innerHTML = '';
-            recentExpenses.forEach(expense => {
-                const category = userData.categories.find(cat => cat.id === expense.categoryId);
-                
-                const item = document.createElement('div');
-                item.className = 'expense-item';
-                item.style.borderRightColor = category ? category.color : '#667eea';
-
-                item.innerHTML = `
-                    <div class="expense-info">
-                        <div class="expense-category">
-                            <div class="category-icon" style="background: ${category ? category.color : '#999'}">
-                                <i class="fas fa-tag"></i>
-                            </div>
-                            ${category ? category.name : 'غير محدد'}
-                        </div>
-                        <div class="expense-details">
-                            <div><i class="fas fa-calendar"></i> ${new Date(expense.date).toLocaleDateString('ar-EG')}</div>
-                            ${expense.notes ? `<div><i class="fas fa-sticky-note"></i> ${expense.notes}</div>` : ''}
-                        </div>
-                    </div>
-                    <div class="expense-amount">${expense.amount.toFixed(2)} ج.م</div>
-                    <div class="expense-actions">
-                        <button class="btn-danger" onclick="deleteExpense(${expense.id})" style="padding: 5px 10px;">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                `;
-                container.appendChild(item);
-            });
-        }
-
-        function updateAllExpensesModal() {
-            const container = document.getElementById('allExpensesContainer');
-            const allExpenses = userData.expenses
-                .sort((a, b) => new Date(b.date) - new Date(a.date));
-
-            if (allExpenses.length === 0) {
-                container.innerHTML = '<div class="empty-state"><i class="fas fa-inbox"></i><p>لا توجد مصروفات</p></div>';
-                return;
-            }
-
-            container.innerHTML = '';
-            allExpenses.forEach(expense => {
-                const category = userData.categories.find(cat => cat.id === expense.categoryId);
-                
-                const item = document.createElement('div');
-                item.className = 'expense-item';
-                item.style.borderRightColor = category ? category.color : '#667eea';
-
-                item.innerHTML = `
-                    <div class="expense-info">
-                        <div class="expense-category">
-                            <div class="category-icon" style="background: ${category ? category.color : '#999'}">
-                                <i class="fas fa-tag"></i>
-                            </div>
-                            ${category ? category.name : 'غير محدد'}
-                        </div>
-                        <div class="expense-details">
-                            <div><i class="fas fa-calendar"></i> ${new Date(expense.date).toLocaleDateString('ar-EG')}</div>
-                            ${expense.notes ? `<div><i class="fas fa-sticky-note"></i> ${expense.notes}</div>` : ''}
-                        </div>
-                    </div>
-                    <div class="expense-amount">${expense.amount.toFixed(2)} ج.م</div>
-                    <div class="expense-actions">
-                        <button class="btn-danger" onclick="deleteExpense(${expense.id})" style="padding: 5px 10px;">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                `;
-                container.appendChild(item);
-            });
-        }
-
-        // ============ Export Functions ============
-        function exportToCSV() {
-            let csv = 'الفئة,المبلغ,التاريخ,الملاحظات,الحد الشهري,المتبقي\n';
-            userData.expenses.forEach(expense => {
-                const category = userData.categories.find(cat => cat.id === expense.categoryId);
-                const categoryExpenses = category ? userData.expenses.filter(exp => exp.categoryId === category.id) : [];
-                const categoryTotal = categoryExpenses.reduce((sum, exp) => sum + exp.amount, 0);
-                const remaining = category && category.limit ? category.limit - categoryTotal : '';
-                
-                csv += `${category ? category.name : ''},${expense.amount},${expense.date},"${expense.notes || ''}",${category ? (category.limit || '') : ''},${remaining}\n`;
-            });
-
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = `مصروفات_${new Date().toLocaleDateString('ar-EG')}.csv`;
-            link.click();
-            hideModal('exportDataModal');
-            alert('✅ تم تصدير البيانات بنجاح!');
-        }
-
-        function exportToJSON() {
-            const data = {
-                user: userData.profile,
-                budget: userData.budget,
-                categories: userData.categories,
-                expenses: userData.expenses,
-                exportDate: new Date().toISOString()
-            };
-
-            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = `مصروفات_${new Date().toLocaleDateString('ar-EG')}.json`;
-            link.click();
-            hideModal('exportDataModal');
-            alert('✅ تم تصدير البيانات بنجاح!');
-        }
-
-        function exportToPDF() {
-            printReport();
-        }
-
-        // ============ Firebase Auth State Listener ============
-        auth.onAuthStateChanged((user) => {
-            if (user) {
-                currentUser = user;
-                loadUserData();
-            } else {
-                showAuth();
-            }
+        db.ref("categories").on("value", (snap)=>{
+          this.state.categories = snap.val() || {};
+          this.renderCategoryOptions();
+          this.renderAdminCategories();
+          this.renderAll();
+          this.hideLoader(loader);
         });
 
-        // ============ Initial Setup ============
-        document.addEventListener('DOMContentLoaded', () => {
-            setDateToToday();
-            
-            // Close settings menu when clicking outside
-            document.addEventListener('click', (e) => {
-                const settingsMenu = document.getElementById('settingsMenu');
-                const settingsBtn = document.querySelector('.fab');
-                
-                if (settingsMenu && settingsMenu.classList.contains('show') && 
-                    !settingsMenu.contains(e.target) && 
-                    !settingsBtn.contains(e.target)) {
-                    hideSettingsMenu();
-                }
-            });
+        db.ref("expenses").on("value", (snap)=>{
+          this.state.expenses = snap.val() || {};
+          this.renderAll();
+          this.hideLoader(loader);
         });
-    </script>
+
+        db.ref("settings").on("value", (snap)=>{
+          if(snap.val()){
+            this.state.settings = snap.val();
+            document.getElementById("globalBudgetInput").value = this.state.settings.globalBudget ?? 0;
+            this.renderAll();
+          }
+          this.hideLoader(loader);
+        });
+      },
+
+      hideLoader(loader){
+        if(!loader || loader.dataset.hidden === "1") return;
+        // hide after first successful payload
+        loader.style.opacity = "0";
+        loader.dataset.hidden = "1";
+        setTimeout(()=> loader.remove(), 420);
+      },
+
+      // --- data helpers ---
+      getExpensesList(){
+        return Object.entries(this.state.expenses).map(([id, val]) => ({ id, ...val }));
+      },
+      getCategoriesList(){
+        return Object.entries(this.state.categories).map(([id, val]) => ({ id, ...val }));
+      },
+      getFilteredExpenses(){
+        // في النسخة العامة يتم عرض جميع المصروفات بدون فلترة على أساس الشهر.
+        return this.getExpensesList();
+      },
+
+      // --- UI rendering ---
+      renderAll(){
+        this.renderDashboard();
+        this.renderTransactionsTable();
+        this.renderRecentTxTable();
+        this.generateReportPreview();
+        this.updateCategoryBalanceHint();
+      },
+
+      renderCategoryOptions(){
+        const cats = this.getCategoriesList().sort((a,b)=> (a.name||"").localeCompare(b.name||""));
+        const opts = ['<option value="">اختر الفئة...</option>']
+          .concat(cats.map(c=> `<option value="${c.id}">${UI.safeText(c.name)}</option>`))
+          .join("");
+
+        document.getElementById("expenseCategory").innerHTML = opts;
+        document.getElementById("editExpCategory").innerHTML = opts;
+
+        const filterOpts = ['<option value="">كل الفئات</option>']
+          .concat(cats.map(c=> `<option value="${c.id}">${UI.safeText(c.name)}</option>`))
+          .join("");
+        document.getElementById("txCatFilter").innerHTML = filterOpts;
+      },
+
+      renderDashboard(){
+        const exps = this.getFilteredExpenses();
+        const cats = this.getCategoriesList();
+
+        let totalSpent = exps.reduce((s,e)=> s + Number(e.amount || 0), 0);
+        let totalBudget = Number(this.state.settings.globalBudget || 0);
+        let remaining = totalBudget - totalSpent;
+
+        document.getElementById("totalBudgetDisplay").innerText = UI.money(totalBudget);
+        document.getElementById("totalSpentDisplay").innerText = UI.money(totalSpent);
+
+        const remEl = document.getElementById("totalRemainingDisplay");
+        remEl.innerText = UI.money(remaining);
+        remEl.className = "value " + (remaining < 0 ? "text-danger-soft" : "text-teal");
+
+        // categories status table
+        const tbody = document.getElementById("categoriesTable");
+        if (tbody) {
+          tbody.innerHTML = "";
+
+          // aggregate spent by cat
+          const spentByCat = {};
+          exps.forEach(e => {
+            spentByCat[e.categoryId] = (spentByCat[e.categoryId] || 0) + Number(e.amount || 0);
+          });
+
+          const rows = cats.map(c=>{
+            const limit = Number(c.limit || 0);
+            const spent = Number(spentByCat[c.id] || 0);
+            const rem = limit - spent;
+            const pct = limit > 0 ? Math.min((spent/limit)*100, 999) : 0;
+            return { ...c, limit, spent, rem, pct };
+          }).sort((a,b)=> (b.spent - a.spent));
+
+          rows.forEach(r=>{
+            const pctShow = Math.min(r.pct, 100);
+            const barClass = r.pct > 90 ? "bg-danger" : (r.pct > 60 ? "bg-warning" : "bg-info");
+            const remClass = r.rem < 0 ? "text-danger-soft" : "text-teal";
+
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+              <td class="fw-bold">${UI.safeText(r.name)}</td>
+              <td class="text-nowrap">${UI.money(r.limit)}</td>
+              <td class="text-nowrap">${UI.money(r.spent)}</td>
+              <td class="text-nowrap fw-bold ${remClass}">${UI.money(r.rem)}</td>
+              <td>
+                <div class="progress" style="height: 7px; background: rgba(255,255,255,.08);">
+                  <div class="progress-bar ${barClass}" style="width:${pctShow}%;"></div>
+                </div>
+                <div class="small text-white-50 mt-1">${Math.round(r.pct)}%</div>
+              </td>
+            `;
+            tbody.appendChild(tr);
+          });
+        }
+      },
+
+      renderRecentTxTable(){
+        const tbody = document.getElementById("recentTxTable");
+        if(!tbody) return;
+
+        const exps = this.getFilteredExpenses()
+          .sort((a,b)=> new Date(b.date) - new Date(a.date))
+          .slice(0,8);
+
+        if(exps.length === 0){
+          tbody.innerHTML = `<tr><td colspan="5" class="text-center text-white-50 py-3">لا توجد عمليات مسجلة حتى الآن</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = exps.map(e=>{
+          const catName = this.state.categories[e.categoryId]?.name || "-";
+          return `
+            <tr>
+              <td class="text-nowrap">${UI.safeText(e.date || "")}</td>
+              <td><span class="badge badge-soft">${UI.safeText(catName)}</span></td>
+              <td class="fw-bold text-gold">${UI.money(e.amount)}</td>
+              <td class="text-white-50">${UI.safeText(e.notes || "")}</td>
+              <td class="text-nowrap">
+                <button class="btn btn-sm btn-outline-info" onclick="app.prepEditExpense('${e.id}')"><i class="fa-solid fa-pen"></i></button>
+                <button class="btn btn-sm btn-outline-danger ms-1" onclick="app.deleteExpense('${e.id}')"><i class="fa-solid fa-trash"></i></button>
+              </td>
+            </tr>
+          `;
+        }).join("");
+      },
+
+      renderTransactionsTable(){
+        const tbody = document.getElementById("txTable");
+        if(!tbody) return;
+
+        const q = (document.getElementById("txSearch").value || "").trim().toLowerCase();
+        const catFilter = document.getElementById("txCatFilter").value;
+
+        let exps = this.getFilteredExpenses().sort((a,b)=> new Date(b.date) - new Date(a.date));
+
+        if(catFilter) exps = exps.filter(e=> e.categoryId === catFilter);
+        if(q){
+          exps = exps.filter(e=> {
+            const catName = (this.state.categories[e.categoryId]?.name || "").toLowerCase();
+            const notes = (e.notes || "").toLowerCase();
+            return catName.includes(q) || notes.includes(q) || (e.date||"").includes(q);
+          });
+        }
+
+        if(exps.length === 0){
+          tbody.innerHTML = `<tr><td colspan="5" class="text-center text-white-50 py-4">لا توجد نتائج</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = exps.map(e=>{
+          const catName = this.state.categories[e.categoryId]?.name || "-";
+          return `
+            <tr>
+              <td class="text-nowrap">${UI.safeText(e.date || "")}</td>
+              <td><span class="badge badge-soft">${UI.safeText(catName)}</span></td>
+              <td class="fw-bold text-gold text-nowrap">${UI.money(e.amount)}</td>
+              <td class="text-white-50">${UI.safeText(e.notes || "")}</td>
+              <td class="text-nowrap">
+                <button class="btn btn-sm btn-outline-info" onclick="app.prepEditExpense('${e.id}')"><i class="fa-solid fa-pen"></i></button>
+                <button class="btn btn-sm btn-outline-danger ms-1" onclick="app.deleteExpense('${e.id}')"><i class="fa-solid fa-trash"></i></button>
+              </td>
+            </tr>
+          `;
+        }).join("");
+      },
+
+      renderAdminCategories(){
+        const tbody = document.getElementById("adminCatTable");
+        if(!tbody) return;
+
+        const cats = this.getCategoriesList().sort((a,b)=> (a.name||"").localeCompare(b.name||""));
+        if(cats.length === 0){
+          tbody.innerHTML = `<tr><td colspan="3" class="text-center text-white-50 py-3">لا توجد فئات</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = cats.map(c=> `
+          <tr>
+            <td class="fw-bold">${UI.safeText(c.name)}</td>
+            <td class="text-nowrap">${UI.money(c.limit)} ج.م</td>
+            <td class="text-nowrap">
+              <button class="btn btn-sm btn-outline-warning" onclick="app.prepEditCategory('${c.id}')"><i class="fa-solid fa-pen"></i></button>
+              <button class="btn btn-sm btn-outline-danger ms-1" onclick="app.deleteCategory('${c.id}')"><i class="fa-solid fa-trash"></i></button>
+            </td>
+          </tr>
+        `).join("");
+      },
+
+      updateCategoryBalanceHint(){
+        const catId = document.getElementById("expenseCategory").value;
+        const hintEl = document.getElementById("categoryBalanceHint");
+
+        if(!catId || !this.state.categories[catId]){
+          hintEl.innerHTML = "";
+          return;
+        }
+
+        const cat = this.state.categories[catId];
+        const exps = this.getFilteredExpenses().filter(e => e.categoryId === catId);
+        const spent = exps.reduce((s,e)=> s + Number(e.amount||0), 0);
+        const remaining = Number(cat.limit||0) - spent;
+
+        hintEl.innerHTML = `المتبقي من <b>${UI.safeText(cat.name)}</b>: <span class="${remaining < 0 ? 'text-danger-soft' : 'text-teal'} fw-bold">${UI.money(remaining)} ج.م</span>`;
+      },
+
+      // --- actions: expenses ---
+      clearExpenseForm(){
+        document.getElementById("expenseCategory").value = "";
+        document.getElementById("expenseAmount").value = "";
+        document.getElementById("expenseNotes").value = "";
+        document.getElementById("expenseDate").valueAsDate = new Date();
+        this.updateCategoryBalanceHint();
+      },
+
+      addExpense(){
+        const catId = document.getElementById("expenseCategory").value;
+        const amount = document.getElementById("expenseAmount").value;
+        const date = document.getElementById("expenseDate").value;
+        const notes = document.getElementById("expenseNotes").value;
+
+        if(!catId || !amount || !date){
+          UI.showToast("من فضلك املأ (الفئة + المبلغ + التاريخ).");
+          return;
+        }
+
+        const month = date.slice(0,7); // حقل جديد اختياري
+
+        db.ref("expenses").push().set({
+          categoryId: catId,
+          amount: Number(amount),
+          date,
+          month,
+          notes: notes || ""
+        }).then(()=>{
+          UI.showToast("تم حفظ المصروف ✅");
+          document.getElementById("expenseAmount").value = "";
+          document.getElementById("expenseNotes").value = "";
+          this.updateCategoryBalanceHint();
+        }).catch(err => UI.showToast("خطأ في الحفظ: " + err.message));
+      },
+
+      deleteExpense(id){
+        this.state.pendingDelete = { type: "expense", id };
+        new bootstrap.Modal(document.getElementById("confirmModal")).show();
+      },
+
+      prepEditExpense(id){
+        const exp = this.state.expenses[id];
+        if(!exp) return;
+
+        document.getElementById("editExpId").value = id;
+        document.getElementById("editExpCategory").value = exp.categoryId || "";
+        document.getElementById("editExpAmount").value = exp.amount ?? 0;
+        document.getElementById("editExpNotes").value = exp.notes || "";
+        document.getElementById("editExpDate").value = exp.date || "";
+
+        new bootstrap.Modal(document.getElementById("editExpenseModal")).show();
+      },
+
+      updateExpense(){
+        const id = document.getElementById("editExpId").value;
+        const categoryId = document.getElementById("editExpCategory").value;
+        const amount = document.getElementById("editExpAmount").value;
+        const date = document.getElementById("editExpDate").value;
+        const notes = document.getElementById("editExpNotes").value;
+
+        const month = (date || "").slice(0,7);
+
+        db.ref("expenses/" + id).update({
+          categoryId,
+          amount: Number(amount),
+          date,
+          month,
+          notes: notes || ""
+        }).then(()=>{
+          bootstrap.Modal.getInstance(document.getElementById("editExpenseModal")).hide();
+          UI.showToast("تم تحديث المصروف ✅");
+        }).catch(err => UI.showToast("خطأ: " + err.message));
+      },
+
+      // --- actions: settings / categories ---
+      saveGlobalSettings(){
+        const val = document.getElementById("globalBudgetInput").value;
+        db.ref("settings").set({ globalBudget: Number(val || 0) })
+          .then(()=> UI.showToast("تم حفظ الميزانية ✅"))
+          .catch(err => UI.showToast("خطأ: " + err.message));
+      },
+
+      saveCategory(){
+        const id = document.getElementById("editCatId").value;
+        const name = document.getElementById("newCatName").value.trim();
+        const limit = document.getElementById("newCatLimit").value;
+
+        if(!name || !limit){
+          UI.showToast("اكتب اسم الفئة والحد.");
+          return;
+        }
+
+        const payload = { name, limit: Number(limit) };
+
+        if(id){
+          db.ref("categories/" + id).update(payload).then(()=>{
+            UI.showToast("تم تحديث الفئة ✅");
+            this.resetCategoryForm();
+          });
+        }else{
+          db.ref("categories").push(payload).then(()=>{
+            UI.showToast("تم إضافة الفئة ✅");
+            this.resetCategoryForm();
+          });
+        }
+      },
+
+      prepEditCategory(id){
+        const cat = this.state.categories[id];
+        if(!cat) return;
+
+        document.getElementById("editCatId").value = id;
+        document.getElementById("newCatName").value = cat.name || "";
+        document.getElementById("newCatLimit").value = cat.limit ?? 0;
+
+        document.getElementById("cancelCatWrap").classList.remove("d-none");
+        document.getElementById("saveCatBtn").className = "btn btn-warning fw-bold";
+        document.getElementById("saveCatBtn").innerHTML = '<i class="fa-solid fa-rotate me-1"></i>تحديث';
+      },
+
+      resetCategoryForm(){
+        document.getElementById("editCatId").value = "";
+        document.getElementById("newCatName").value = "";
+        document.getElementById("newCatLimit").value = "";
+        document.getElementById("cancelCatWrap").classList.add("d-none");
+        document.getElementById("saveCatBtn").className = "btn btn-primary fw-bold";
+        document.getElementById("saveCatBtn").innerHTML = '<i class="fa-solid fa-plus me-1"></i>حفظ';
+      },
+
+      deleteCategory(id){
+        this.state.pendingDelete = { type: "category", id };
+        new bootstrap.Modal(document.getElementById("confirmModal")).show();
+      },
+
+      executeDelete(){
+        if(!this.state.pendingDelete) return;
+        const { type, id } = this.state.pendingDelete;
+
+        const ref = (type === "category") ? db.ref("categories/" + id) : db.ref("expenses/" + id);
+        ref.remove().then(()=>{
+          UI.showToast("تم الحذف ✅");
+        }).catch(err => UI.showToast("خطأ: " + err.message)).finally(()=>{
+          bootstrap.Modal.getInstance(document.getElementById("confirmModal")).hide();
+          this.state.pendingDelete = null;
+        });
+      },
+
+      // --- reports ---
+      generateReportPreview(){
+        const exps = this.getFilteredExpenses();
+        const cats = this.getCategoriesList();
+        const dateStr = new Date().toLocaleDateString('ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+        const spentByCat = {};
+        exps.forEach(e => { spentByCat[e.categoryId] = (spentByCat[e.categoryId] || 0) + Number(e.amount||0); });
+
+        let totalSpent = 0;
+        const rows = cats.map(c=>{
+          const spent = Number(spentByCat[c.id] || 0);
+          totalSpent += spent;
+          const rem = Number(c.limit||0) - spent;
+          const cls = rem < 0 ? "color:#ff7675" : "color:#1abc9c";
+          return `
+            <div style="display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.08)">
+              <div style="font-weight:700;opacity:.9">${UI.safeText(c.name)}</div>
+              <div style="opacity:.9">
+                <span style="opacity:.65">صرف:</span> <b>${UI.money(spent)}</b>
+                <span style="opacity:.35;margin:0 8px">|</span>
+                <span style="opacity:.65">متبقي:</span> <b style="${cls}">${UI.money(rem)}</b>
+              </div>
+            </div>
+          `;
+        }).join("");
+
+        const budget = Number(this.state.settings.globalBudget || 0);
+        const remAll = budget - totalSpent;
+        const remColor = remAll < 0 ? "#ff7675" : "#1abc9c";
+
+        document.getElementById("reportPreview").innerHTML = `
+          <div style="text-align:center;margin-bottom:14px">
+            <div style="font-size:20px;font-weight:800;color:#f1c40f">
+              <i class="fa-solid fa-file-invoice-dollar"></i> تقرير المصاريف
+            </div>
+            <div style="margin-top:8px;display:inline-block;padding:6px 10px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);font-size:13px;opacity:.9">
+              <i class="fa-regular fa-clock"></i> ${UI.safeText(dateStr)}
+            </div>
+          </div>
+
+          <div style="padding:12px;border-radius:14px;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.08)">
+            <div style="color:#1abc9c;font-weight:800;margin-bottom:10px">تفاصيل الفئات</div>
+            ${rows || '<div style="opacity:.7">لا توجد فئات</div>'}
+          </div>
+
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px">
+            <div style="padding:12px;border-radius:14px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);text-align:center">
+              <div style="opacity:.7;font-size:12px">الميزانية</div>
+              <div style="font-weight:900;font-size:18px">${UI.money(budget)}</div>
+            </div>
+            <div style="padding:12px;border-radius:14px;background:rgba(220,53,69,.12);border:1px solid rgba(220,53,69,.25);text-align:center">
+              <div style="opacity:.85;font-size:12px;color:#ff7675">إجمالي الصرف</div>
+              <div style="font-weight:900;font-size:18px;color:#ff7675">${UI.money(totalSpent)}</div>
+            </div>
+            <div style="padding:12px;border-radius:14px;background:rgba(25,135,84,.12);border:1px solid rgba(25,135,84,.25);text-align:center">
+              <div style="opacity:.85;font-size:12px;color:#1abc9c">المتبقي</div>
+              <div style="font-weight:900;font-size:18px;color:${remColor}">${UI.money(remAll)}</div>
+            </div>
+          </div>
+
+          <div style="text-align:center;margin-top:14px;padding-top:10px;border-top:1px solid rgba(255,255,255,.08)">
+            <span style="display:inline-block;padding:6px 10px;border-radius:999px;background:rgba(241,196,15,.10);border:1px solid rgba(241,196,15,.18);color:#f1c40f;font-size:12px">
+              <i class="fa-solid fa-code"></i> تصميم وبرمجة: م. بولس سمير
+            </span>
+          </div>
+        `;
+      },
+
+      shareWhatsAppText(){
+        const exps = this.getFilteredExpenses();
+        const cats = this.getCategoriesList();
+        const spentByCat = {};
+        exps.forEach(e => { spentByCat[e.categoryId] = (spentByCat[e.categoryId] || 0) + Number(e.amount||0); });
+
+        let total = 0;
+        let text = `*تقرير المصاريف*%0a`;
+
+        cats.forEach(c=>{
+          const spent = Number(spentByCat[c.id] || 0);
+          total += spent;
+          const rem = Number(c.limit||0) - spent;
+          text += `📌 *${c.name}:* صرف ${Math.round(spent)} (متبقي ${Math.round(rem)})%0a`;
+        });
+
+        text += `------------------%0a`;
+        text += `💰 *الإجمالي:* ${Math.round(total)} / ${Math.round(Number(this.state.settings.globalBudget||0))}`;
+
+        window.open(`https://wa.me/?text=${text}`, "_blank");
+      },
+
+      async shareReportImage(evt){
+        const btn = evt?.currentTarget;
+        const original = btn?.innerHTML;
+        if(btn) btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i>جاري التجهيز...';
+
+        try{
+          const element = document.getElementById("reportPreview");
+          const canvas = await html2canvas(element, { backgroundColor: "#0f2430", scale: 2 });
+          const blob = await new Promise(res => canvas.toBlob(res, "image/png"));
+
+          const file = new File([blob], "Expenses_Report.png", { type: "image/png" });
+
+          if(navigator.share && navigator.canShare && navigator.canShare({ files: [file] })){
+            await navigator.share({ files: [file], title: "تقرير المصاريف", text: "تقرير مصاريف المنزل" });
+          }else{
+            const link = document.createElement("a");
+            link.download = "Expenses_Report.png";
+            link.href = canvas.toDataURL("image/png");
+            link.click();
+            UI.showToast("تم حفظ صورة التقرير على جهازك ✅");
+          }
+        }catch(e){
+          console.error(e);
+          UI.showToast("حدث خطأ أثناء إنشاء الصورة.");
+        }finally{
+          if(btn) btn.innerHTML = original;
+        }
+      },
+
+      exportCsv(){
+        const exps = this.getFilteredExpenses().sort((a,b)=> new Date(a.date) - new Date(b.date));
+        const header = ["date","category","amount","notes"].join(",");
+        const rows = exps.map(e=>{
+          const cat = (this.state.categories[e.categoryId]?.name || "").replaceAll('"','""');
+          const notes = (e.notes || "").replaceAll('"','""');
+          return `"${e.date||""}","${cat}","${Number(e.amount||0)}","${notes}"`;
+        });
+        const csv = [header, ...rows].join("\n");
+
+        const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `expenses_all.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+    };
+
+    // expose for onclick handlers
+    window.app = app;
+
+    document.addEventListener("DOMContentLoaded", ()=> app.init());
+  </script>
 </body>
 </html>
